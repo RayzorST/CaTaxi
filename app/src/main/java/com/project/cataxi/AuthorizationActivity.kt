@@ -6,48 +6,41 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.yandex.mapkit.MapKitFactory
 
 class AuthorizationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MapKitFactory.setApiKey("fc283d50-7a89-4871-ba06-68f2e2a431a9")
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         setContent {
             LoginAndRegistration()
@@ -106,7 +99,7 @@ class AuthorizationActivity : ComponentActivity() {
                 },
             )
             if (emailErrorState.value) {
-                Text(text = "Обязательно поле", color = Color.Red)
+                Text(text = "Обязательно поле", color = colorResource(R.color.red))
             }
             Spacer(Modifier.size(16.dp))
             val passwordVisibility = remember { mutableStateOf(true) }
@@ -126,10 +119,11 @@ class AuthorizationActivity : ComponentActivity() {
                 visualTransformation = if (passwordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (passwordErrorState.value) {
-                Text(text = "Обязательно поле", color = Color.Red)
+                Text(text = "Обязательно поле", color = colorResource(R.color.red))
             }
             Spacer(Modifier.size(16.dp))
             Button(
+                shape = RoundedCornerShape(12.dp),
                 onClick = {
                     when {
                         email.value.text.isEmpty() -> {
@@ -198,10 +192,10 @@ class AuthorizationActivity : ComponentActivity() {
         ) {
 
             Text(text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = Color.Red)) {
+                withStyle(style = SpanStyle(color = colorResource(R.color.red))) {
                     append("Р")
                 }
-                withStyle(style = SpanStyle(color = Color.Black)) {
+                withStyle(style = SpanStyle(color = colorResource(R.color.dark_gray))) {
                     append("егистрация")
                 }
             }, fontSize = 30.sp)
@@ -222,7 +216,7 @@ class AuthorizationActivity : ComponentActivity() {
                 },
             )
             if (nameErrorState.value) {
-                Text(text = "Обяазтельное поле", color = Color.Red)
+                Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
             }
             Spacer(Modifier.size(16.dp))
 
@@ -242,7 +236,7 @@ class AuthorizationActivity : ComponentActivity() {
                 },
             )
             if (emailErrorState.value) {
-                Text(text = "Обяазтельное поле", color = Color.Red)
+                Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
             }
             Spacer(Modifier.size(16.dp))
 
@@ -292,10 +286,11 @@ class AuthorizationActivity : ComponentActivity() {
                 } else {
                     ""
                 }
-                Text(text = msg, color = Color.Red)
+                Text(text = msg, color = colorResource(R.color.red))
             }
             Spacer(Modifier.size(16.dp))
             Button(
+                shape = RoundedCornerShape(12.dp),
                 onClick = {
                     when {
                         name.value.text.isEmpty() -> {
@@ -346,7 +341,7 @@ class AuthorizationActivity : ComponentActivity() {
                         launchSingleTop = true
                     }
                 }) {
-                    Text(text = "Войти", color = Color.Red)
+                    Text(text = "Войти", color = colorResource(R.color.red))
                 }
             }
         }

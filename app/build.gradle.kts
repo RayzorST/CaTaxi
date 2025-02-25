@@ -40,6 +40,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.compose.foundation:foundation:1.2.0")
     implementation("androidx.navigation:navigation-compose:2.4.0-alpha06")
     implementation("com.yandex.android:maps.mobile:4.4.0-full")
     implementation(libs.androidx.core.ktx)
