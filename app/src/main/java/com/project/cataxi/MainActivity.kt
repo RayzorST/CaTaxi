@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,18 +20,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,9 +49,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,13 +84,55 @@ class MainActivity : ComponentActivity() {
                     .align(Alignment.TopStart)
             )
 
+            var searchError = remember { mutableStateOf(false) }
+
+            when {
+                searchError.value -> {
+                    Placeholder(Modifier.align(Alignment.Center),
+                        onRetry = {
+                        searchError.value = false
+                    })
+                }
+            }
+
             BottomMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(unbounded = true)
                     .align(Alignment.BottomCenter)
-                    .shadow(elevation = 50.dp)
+                    .shadow(elevation = 50.dp),
+                searchError = searchError
             )
+        }
+    }
+
+    @Composable
+    fun Placeholder(modifier: Modifier = Modifier, onRetry: () -> Unit) {
+        Box(modifier = modifier
+            .wrapContentWidth(unbounded = true)
+            .wrapContentHeight(unbounded = true)
+            .background(colorResource(R.color.white0))
+            .shadow(100.dp)
+        )
+        {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Произошла ошибка при поиске",
+                    fontSize = 18.sp,
+                    color = Color.Red,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRetry) {
+                    Text("Обновить")
+                }
+            }
         }
     }
 
@@ -121,9 +176,10 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BottomMenu(modifier: Modifier = Modifier) {
-        val pointA = remember { mutableStateOf(TextFieldValue()) }
-        val pointB = remember { mutableStateOf(TextFieldValue()) }
+    fun BottomMenu(modifier: Modifier = Modifier, searchError: MutableState<Boolean>) {
+        val pointA = remember { mutableStateOf("") }
+        val pointB = remember { mutableStateOf("") }
+
         Surface(
             modifier = modifier
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
@@ -139,31 +195,9 @@ class MainActivity : ComponentActivity() {
             ) {
                 Text(text = "CaTaxi", color = colorResource(R.color.red))
 
-                OutlinedTextField(
-                    value = pointA.value,
-                    onValueChange = {
-                        pointA.value = it
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    label = {
-                        Text(text = "Точка А")
-                    }
-                )
+                SearchBar("Точка А", pointA)
 
-                OutlinedTextField(
-                    value = pointB.value,
-                    onValueChange = {
-                        pointB.value = it
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    label = {
-                        Text(text = "Точка Б")
-                    }
-                )
+                SearchBar("Точка Б", pointB)
 
                 TaxiCardPager()
 
@@ -186,7 +220,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Button(
-                        onClick = {  },
+                        onClick = { searchError.value = true },
                         modifier = Modifier
                             .height(56.dp)
                             .fillMaxWidth(),
@@ -200,11 +234,58 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SearchBar(
+        hint: String,
+        searchText: MutableState<String>,
+        modifier: Modifier = Modifier
+    ) {
+        val keyboardController = LocalSoftwareKeyboardController.current
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            OutlinedTextField(
+                value = searchText.value,
+                onValueChange = { searchText.value = it },
+                modifier = modifier
+                    .weight(1f),
+                label = { Text(text = hint) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { keyboardController?.hide() }
+                ),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                )
+            )
+
+            if (searchText.value.isNotEmpty()) {
+                IconButton(
+                    modifier = Modifier.padding(top = 8.dp),
+                    onClick = {
+                        searchText.value = ""
+                        keyboardController?.hide()
+                    }
+                ) {
+                    Icon(imageVector = Icons.Default.Clear, contentDescription = "Очистить")
+                }
+            }
+        }
+    }
+
     @Composable
     fun TaxiCard(title: String, description: String) {
         Card(
             modifier = Modifier
-                .fillMaxWidth().padding(8.dp),
+                .fillMaxWidth()
+                .padding(8.dp),
             colors = CardDefaults.cardColors(colorResource(R.color.red)),
         ) {
             Column(

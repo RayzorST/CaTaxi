@@ -12,9 +12,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +64,7 @@ class AuthorizationActivity : ComponentActivity() {
         })
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun LoginScreen(navController: NavController) {
         val context = LocalContext.current
@@ -97,6 +100,11 @@ class AuthorizationActivity : ComponentActivity() {
                 label = {
                     Text(text = "Введите почту*")
                 },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                )
             )
             if (emailErrorState.value) {
                 Text(text = "Обязательно поле", color = colorResource(R.color.red))
@@ -116,6 +124,11 @@ class AuthorizationActivity : ComponentActivity() {
                 label = {
                     Text(text = "Введите пароль*")
                 },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                ),
                 visualTransformation = if (passwordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (passwordErrorState.value) {
@@ -167,6 +180,7 @@ class AuthorizationActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun RegistrationScreen(navController: NavController) {
         val context = LocalContext.current
@@ -214,6 +228,11 @@ class AuthorizationActivity : ComponentActivity() {
                 label = {
                     Text(text = "Имя*")
                 },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                )
             )
             if (nameErrorState.value) {
                 Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
@@ -234,6 +253,11 @@ class AuthorizationActivity : ComponentActivity() {
                 label = {
                     Text(text = "Почта*")
                 },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                )
             )
             if (emailErrorState.value) {
                 Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
@@ -255,6 +279,11 @@ class AuthorizationActivity : ComponentActivity() {
                     Text(text = "Пароль*")
                 },
                 isError = passwordErrorState.value,
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                ),
                 visualTransformation = if (passwordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (passwordErrorState.value) {
@@ -276,6 +305,11 @@ class AuthorizationActivity : ComponentActivity() {
                 label = {
                     Text(text = "Повтор пароля*")
                 },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = colorResource(R.color.red),
+                    focusedBorderColor = colorResource(R.color.red)
+                ),
                 visualTransformation = if (cPasswordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (confirmPasswordErrorState.value) {
@@ -331,7 +365,7 @@ class AuthorizationActivity : ComponentActivity() {
                     Text(text = "Регистрация", color = Color.White)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(Color.Red)
+                colors = ButtonDefaults.buttonColors(colorResource(R.color.red))
             )
             Spacer(Modifier.size(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {

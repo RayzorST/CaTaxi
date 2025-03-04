@@ -94,7 +94,11 @@ class AccountActivity : ComponentActivity() {
                         label = { Text("Фамилия") },
                         modifier = Modifier
                             .fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = colorResource(R.color.white)),
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = colorResource(R.color.white),
+                            focusedLabelColor = colorResource(R.color.red),
+                            focusedIndicatorColor = colorResource(R.color.red)
+                        ),
                         shape = RoundedCornerShape(
                             topStart = 12.dp,
                             topEnd = 12.dp
@@ -106,7 +110,12 @@ class AccountActivity : ComponentActivity() {
                         label = { Text("Имя") },
                         modifier = Modifier
                             .fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = colorResource(R.color.white))
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = colorResource(R.color.white),
+                            focusedLabelColor = colorResource(R.color.red)
+                            ,
+                            focusedIndicatorColor = colorResource(R.color.red)
+                        )
                     )
                     TextField(
                         value = "",
@@ -114,7 +123,11 @@ class AccountActivity : ComponentActivity() {
                         label = { Text("Отчество") },
                         modifier = Modifier
                             .fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = colorResource(R.color.white))
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = colorResource(R.color.white),
+                            focusedLabelColor = colorResource(R.color.red),
+                            focusedIndicatorColor = colorResource(R.color.red)
+                        )
                     )
                     Button(
                         onClick = { startActivity(Intent(this@AccountActivity, AuthorizationActivity::class.java)) },
