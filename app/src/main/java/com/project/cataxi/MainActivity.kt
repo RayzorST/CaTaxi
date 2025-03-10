@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +74,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MapScreen() {
+        var searchError = remember { mutableStateOf(0) }
+
         Box(modifier = Modifier.fillMaxSize()) {
             MapViewContainer(modifier = Modifier.fillMaxSize())
 
@@ -84,17 +85,6 @@ class MainActivity : ComponentActivity() {
                     .align(Alignment.TopStart)
             )
 
-            var searchError = remember { mutableStateOf(false) }
-
-            when {
-                searchError.value -> {
-                    Placeholder(Modifier.align(Alignment.Center),
-                        onRetry = {
-                        searchError.value = false
-                    })
-                }
-            }
-
             BottomMenu(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,34 +93,65 @@ class MainActivity : ComponentActivity() {
                     .shadow(elevation = 50.dp),
                 searchError = searchError
             )
+
+            when {
+                searchError.value == 1 -> {
+                    Placeholder(Modifier
+                        .align(Alignment.Center),
+                        onClickButton = {
+                            searchError.value = 0
+                        },
+                        placeholder = "404",
+                        searchError = searchError)
+                }
+
+                searchError.value == 2 -> {
+                    Placeholder(Modifier
+                        .align(Alignment.Center),
+                        onClickButton = {
+                            searchError.value = 0
+                        },
+                        placeholder = "Ошибка при поиске",
+                        searchError = searchError)
+                }
+            }
         }
     }
 
     @Composable
-    fun Placeholder(modifier: Modifier = Modifier, onRetry: () -> Unit) {
-        Box(modifier = modifier
-            .wrapContentWidth(unbounded = true)
-            .wrapContentHeight(unbounded = true)
-            .background(colorResource(R.color.white0))
-            .shadow(100.dp)
-        )
-        {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Произошла ошибка при поиске",
-                    fontSize = 18.sp,
-                    color = Color.Red,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRetry) {
-                    Text("Обновить")
+    fun Placeholder(modifier: Modifier = Modifier, placeholder: String, onClickButton: () -> Unit = {}, searchError: MutableState<Int>) {
+        Box(Modifier
+            .background(Color(0x80000000))
+            .fillMaxSize()
+            .clickable { searchError.value = 0 }
+        ) {
+            Box(modifier = modifier
+                .wrapContentWidth(unbounded = true)
+                .wrapContentHeight(unbounded = true)
+                .background(colorResource(R.color.white0), RoundedCornerShape(20))
+                .shadow(100.dp)
+            )
+            {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = placeholder,
+                        fontSize = 18.sp,
+                        color = Color.Red,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onClickButton,
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                    ) {
+                        Text("Обновить")
+                    }
                 }
             }
         }
@@ -176,7 +197,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BottomMenu(modifier: Modifier = Modifier, searchError: MutableState<Boolean>) {
+    fun BottomMenu(modifier: Modifier = Modifier, searchError: MutableState<Int>) {
         val pointA = remember { mutableStateOf("") }
         val pointB = remember { mutableStateOf("") }
 
@@ -220,7 +241,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Button(
-                        onClick = { searchError.value = true },
+                        onClick = {
+                            if (pointA.value == ""){
+                                searchError.value = 1
+                            }
+                            else{
+                                searchError.value = 2
+                            }
+                                  },
                         modifier = Modifier
                             .height(56.dp)
                             .fillMaxWidth(),
