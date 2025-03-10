@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MapScreen() {
-        var searchError = remember { mutableStateOf(0) }
+        var placeholderState = remember { mutableStateOf(0) }
 
         Box(modifier = Modifier.fillMaxSize()) {
             MapViewContainer(modifier = Modifier.fillMaxSize())
@@ -91,39 +91,48 @@ class MainActivity : ComponentActivity() {
                     .wrapContentHeight(unbounded = true)
                     .align(Alignment.BottomCenter)
                     .shadow(elevation = 50.dp),
-                searchError = searchError
+                placeholderState = placeholderState
             )
 
             when {
-                searchError.value == 1 -> {
+                placeholderState.value == 1 -> {
                     Placeholder(Modifier
                         .align(Alignment.Center),
                         onClickButton = {
-                            searchError.value = 0
+                            placeholderState.value = 1
                         },
                         placeholder = "404",
-                        searchError = searchError)
+                        description = "Ничего не получилось найти",
+                        placeholderState = placeholderState)
                 }
 
-                searchError.value == 2 -> {
+                placeholderState.value == 2 -> {
                     Placeholder(Modifier
                         .align(Alignment.Center),
+                        existButton = true,
                         onClickButton = {
-                            searchError.value = 0
+                            placeholderState.value = 2
                         },
                         placeholder = "Ошибка при поиске",
-                        searchError = searchError)
+                        description = "Попробуйте чуть позже",
+                        placeholderState = placeholderState)
                 }
             }
         }
     }
 
     @Composable
-    fun Placeholder(modifier: Modifier = Modifier, placeholder: String, onClickButton: () -> Unit = {}, searchError: MutableState<Int>) {
+    fun Placeholder(
+        modifier: Modifier = Modifier,
+        placeholder: String,
+        description: String,
+        existButton: Boolean = false,
+        onClickButton: () -> Unit = {},
+        placeholderState: MutableState<Int>) {
         Box(Modifier
             .background(Color(0x80000000))
             .fillMaxSize()
-            .clickable { searchError.value = 0 }
+            .clickable { placeholderState.value = 0 }
         ) {
             Box(modifier = modifier
                 .wrapContentWidth(unbounded = true)
@@ -145,12 +154,31 @@ class MainActivity : ComponentActivity() {
                         color = Color.Red,
                         textAlign = TextAlign.Center
                     )
+                    Text(
+                        text = description,
+                        fontSize = 16.sp,
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onClickButton,
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
-                    ) {
-                        Text("Обновить")
+                    Row(){
+                        if (existButton) {
+                            Button(
+                                modifier = Modifier.padding(8.dp),
+                                onClick = onClickButton,
+                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                            ) {
+                                Text("Обновить")
+                            }
+                        }
+
+                        Button(
+                            modifier = Modifier.padding(8.dp),
+                            onClick = { placeholderState.value = 0},
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                        ) {
+                            Text("Закрыть")
+                        }
                     }
                 }
             }
@@ -197,7 +225,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BottomMenu(modifier: Modifier = Modifier, searchError: MutableState<Int>) {
+    fun BottomMenu(modifier: Modifier = Modifier, placeholderState: MutableState<Int>) {
         val pointA = remember { mutableStateOf("") }
         val pointB = remember { mutableStateOf("") }
 
@@ -243,10 +271,10 @@ class MainActivity : ComponentActivity() {
                     Button(
                         onClick = {
                             if (pointA.value == ""){
-                                searchError.value = 1
+                                placeholderState.value = 1
                             }
                             else{
-                                searchError.value = 2
+                                placeholderState.value = 2
                             }
                                   },
                         modifier = Modifier
