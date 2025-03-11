@@ -2,6 +2,7 @@ package com.project.cataxi
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,6 +42,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,7 +62,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.VisibleRegionUtils
 import com.yandex.mapkit.mapview.MapView
+import com.yandex.mapkit.search.Address
+import com.yandex.mapkit.search.Response
+import com.yandex.mapkit.search.SearchManager
+import com.yandex.mapkit.search.SearchFactory
+import com.yandex.mapkit.search.SearchManagerType
+import com.yandex.mapkit.search.SearchOptions
+import com.yandex.mapkit.search.SearchType
+import com.yandex.mapkit.search.Session
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,10 +86,11 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MapScreen() {
-        var placeholderState = remember { mutableStateOf(0) }
+        val placeholderState = remember { mutableStateOf(0) }
+        val map = remember { mutableStateOf(MapView(this)) }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            MapViewContainer(modifier = Modifier.fillMaxSize())
+            MapViewContainer(map.value, modifier = Modifier.fillMaxSize())
 
             AvatarButton(
                 modifier = Modifier
@@ -86,6 +99,7 @@ class MainActivity : ComponentActivity() {
             )
 
             BottomMenu(
+                yandexMap = map.value,
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(unbounded = true)
@@ -154,13 +168,16 @@ class MainActivity : ComponentActivity() {
                         color = Color.Red,
                         textAlign = TextAlign.Center
                     )
+
                     Text(
                         text = description,
                         fontSize = 16.sp,
                         color = Color.Black,
                         textAlign = TextAlign.Center
                     )
+
                     Spacer(modifier = Modifier.height(16.dp))
+
                     Row(){
                         if (existButton) {
                             Button(
@@ -186,16 +203,21 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MapViewContainer(modifier: Modifier = Modifier) {
+    fun MapViewContainer(yandexMap: MapView, modifier: Modifier = Modifier) {
+        val point = remember { mutableStateOf(Point(55.751574, 37.573856)) }
+        val zoom = remember { mutableFloatStateOf(11f) }
+        val azimuth = remember { mutableFloatStateOf(0f) }
+        val tilt = remember { mutableFloatStateOf(0f) }
+
         AndroidView(
             factory = { context ->
-                MapView(context).apply {
+               yandexMap.apply {
                     map.move(
                         CameraPosition(
-                            Point(55.751574, 37.573856),
-                            11.0f,
-                            0.0f,
-                            0.0f
+                            point.value,
+                            zoom.floatValue,
+                            azimuth.floatValue,
+                            tilt.floatValue
                         )
                     )
                 }
@@ -225,9 +247,29 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BottomMenu(modifier: Modifier = Modifier, placeholderState: MutableState<Int>) {
+    fun BottomMenu(yandexMap: MapView, modifier: Modifier = Modifier, placeholderState: MutableState<Int>) {
         val pointA = remember { mutableStateOf("") }
         val pointB = remember { mutableStateOf("") }
+
+        val searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
+
+        val searchOptions = SearchOptions().apply {
+            searchTypes = SearchType.BIZ.value
+            resultPageSize = 32
+        }
+
+        val searchSessionListener = object : Session.SearchListener {
+            override fun onSearchResponse(response: Response) {
+                Log.e("ffeef", "Fefe")
+                response.collection.children.forEach { obj ->
+                    Log.e("ffeef", "Fefe")
+                }
+            }
+
+            override fun onSearchError(p0: com.yandex.runtime.Error) {
+                Log.e("ffeef", "Fefe")
+            }
+        }
 
         Surface(
             modifier = modifier
@@ -244,9 +286,29 @@ class MainActivity : ComponentActivity() {
             ) {
                 Text(text = "CaTaxi", color = colorResource(R.color.red))
 
-                SearchBar("Точка А", pointA)
+                SearchBar("Точка А", pointA,
+                    {
+                        pointA.value = it
+                        val session = searchManager.submit(
+                            pointA.value,
+                            VisibleRegionUtils.toPolygon(yandexMap.map.visibleRegion),
+                            searchOptions,
+                            searchSessionListener
+                        )
+                    })
 
-                SearchBar("Точка Б", pointB)
+                SearchBar("Точка Б", pointB,
+                    {
+                        pointB.value = it
+                        val session = searchManager.submit(
+                            pointB.value,
+                            VisibleRegionUtils.toPolygon(yandexMap.map.visibleRegion),
+                            SearchOptions().apply {
+                                searchTypes = SearchType.BIZ.value
+                            },
+                            searchSessionListener
+                        )
+                    })
 
                 TaxiCardPager()
 
@@ -295,6 +357,7 @@ class MainActivity : ComponentActivity() {
     fun SearchBar(
         hint: String,
         searchText: MutableState<String>,
+        onValueChange: (String) -> Unit,
         modifier: Modifier = Modifier
     ) {
         val keyboardController = LocalSoftwareKeyboardController.current
@@ -302,11 +365,11 @@ class MainActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(horizontal = 8.dp)
         ) {
             OutlinedTextField(
                 value = searchText.value,
-                onValueChange = { searchText.value = it },
+                onValueChange = onValueChange,
                 modifier = modifier
                     .weight(1f),
                 label = { Text(text = hint) },
