@@ -19,8 +19,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -69,10 +72,10 @@ class AuthorizationActivity : ComponentActivity() {
     @Composable
     fun LoginScreen(navController: NavController) {
         val context = LocalContext.current
-        val email = remember { mutableStateOf(TextFieldValue()) }
+        var email by rememberSaveable { mutableStateOf("") }
         val emailErrorState = remember { mutableStateOf(false) }
         val passwordErrorState = remember { mutableStateOf(false) }
-        val password = remember { mutableStateOf(TextFieldValue()) }
+        var password by rememberSaveable { mutableStateOf("") }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,12 +92,12 @@ class AuthorizationActivity : ComponentActivity() {
             }, fontSize = 30.sp)
             Spacer(Modifier.size(16.dp))
             OutlinedTextField(
-                value = email.value,
+                value = email,
                 onValueChange = {
                     if (emailErrorState.value) {
                         emailErrorState.value = false
                     }
-                    email.value = it
+                    email = it
                 },
                 isError = emailErrorState.value,
                 modifier = Modifier.fillMaxWidth(),
@@ -113,12 +116,12 @@ class AuthorizationActivity : ComponentActivity() {
             Spacer(Modifier.size(16.dp))
             val passwordVisibility = remember { mutableStateOf(true) }
             OutlinedTextField(
-                value = password.value,
+                value = password,
                 onValueChange = {
                     if (passwordErrorState.value) {
                         passwordErrorState.value = false
                     }
-                    password.value = it
+                    password = it
                 },
                 isError = passwordErrorState.value,
                 modifier = Modifier.fillMaxWidth(),
@@ -140,11 +143,11 @@ class AuthorizationActivity : ComponentActivity() {
                 shape = RoundedCornerShape(12.dp),
                 onClick = {
                     when {
-                        email.value.text.isEmpty() -> {
+                        email.isEmpty() -> {
                             emailErrorState.value = true
                         }
 
-                        password.value.text.isEmpty() -> {
+                        password.isEmpty() -> {
                             passwordErrorState.value = true
                         }
 
@@ -185,12 +188,12 @@ class AuthorizationActivity : ComponentActivity() {
     @Composable
     fun RegistrationScreen(navController: NavController) {
         val context = LocalContext.current
-        val name = remember {
-            mutableStateOf(TextFieldValue())
+        var name by rememberSaveable {
+            mutableStateOf("")
         }
-        val email = remember { mutableStateOf(TextFieldValue()) }
-        val password = remember { mutableStateOf(TextFieldValue()) }
-        val confirmPassword = remember { mutableStateOf(TextFieldValue()) }
+        var email by rememberSaveable { mutableStateOf("") }
+        var password by rememberSaveable { mutableStateOf("") }
+        var confirmPassword by rememberSaveable { mutableStateOf("") }
 
         val nameErrorState = remember { mutableStateOf(false) }
         val emailErrorState = remember { mutableStateOf(false) }
@@ -216,12 +219,12 @@ class AuthorizationActivity : ComponentActivity() {
             }, fontSize = 30.sp)
             Spacer(Modifier.size(16.dp))
             OutlinedTextField(
-                value = name.value,
+                value = name,
                 onValueChange = {
                     if (nameErrorState.value) {
                         nameErrorState.value = false
                     }
-                    name.value = it
+                    name = it
                 },
 
                 modifier = Modifier.fillMaxWidth(),
@@ -241,12 +244,12 @@ class AuthorizationActivity : ComponentActivity() {
             Spacer(Modifier.size(16.dp))
 
             OutlinedTextField(
-                value = email.value,
+                value = email,
                 onValueChange = {
                     if (emailErrorState.value) {
                         emailErrorState.value = false
                     }
-                    email.value = it
+                    email = it
                 },
 
                 modifier = Modifier.fillMaxWidth(),
@@ -268,12 +271,12 @@ class AuthorizationActivity : ComponentActivity() {
 
             val passwordVisibility = remember { mutableStateOf(true) }
             OutlinedTextField(
-                value = password.value,
+                value = password,
                 onValueChange = {
                     if (passwordErrorState.value) {
                         passwordErrorState.value = false
                     }
-                    password.value = it
+                    password = it
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = {
@@ -294,12 +297,12 @@ class AuthorizationActivity : ComponentActivity() {
             Spacer(Modifier.size(16.dp))
             val cPasswordVisibility = remember { mutableStateOf(true) }
             OutlinedTextField(
-                value = confirmPassword.value,
+                value = confirmPassword,
                 onValueChange = {
                     if (confirmPasswordErrorState.value) {
                         confirmPasswordErrorState.value = false
                     }
-                    confirmPassword.value = it
+                    confirmPassword = it
                 },
                 modifier = Modifier.fillMaxWidth(),
                 isError = confirmPasswordErrorState.value,
@@ -314,9 +317,9 @@ class AuthorizationActivity : ComponentActivity() {
                 visualTransformation = if (cPasswordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (confirmPasswordErrorState.value) {
-                val msg = if (confirmPassword.value.text.isEmpty()) {
+                val msg = if (confirmPassword.isEmpty()) {
                     "Обязательно поле"
-                } else if (confirmPassword.value.text != password.value.text) {
+                } else if (confirmPassword != password) {
                     "Разные пароли"
                 } else {
                     ""
@@ -328,23 +331,23 @@ class AuthorizationActivity : ComponentActivity() {
                 shape = RoundedCornerShape(12.dp),
                 onClick = {
                     when {
-                        name.value.text.isEmpty() -> {
+                        name.isEmpty() -> {
                             nameErrorState.value = true
                         }
 
-                        email.value.text.isEmpty() -> {
+                        email.isEmpty() -> {
                             emailErrorState.value = true
                         }
 
-                        password.value.text.isEmpty() -> {
+                        password.isEmpty() -> {
                             passwordErrorState.value = true
                         }
 
-                        confirmPassword.value.text.isEmpty() -> {
+                        confirmPassword.isEmpty() -> {
                             confirmPasswordErrorState.value = true
                         }
 
-                        confirmPassword.value.text != password.value.text -> {
+                        confirmPassword != password -> {
                             confirmPasswordErrorState.value = true
                         }
 
