@@ -8,10 +8,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,54 +45,117 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.project.cataxi.ui.theme.CaTaxiTheme
+import com.yandex.mapkit.GeoObjectCollection
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.VisibleRegionUtils
 import com.yandex.mapkit.mapview.MapView
-import com.yandex.mapkit.search.Address
 import com.yandex.mapkit.search.Response
-import com.yandex.mapkit.search.SearchManager
 import com.yandex.mapkit.search.SearchFactory
+import com.yandex.mapkit.search.SearchManager
 import com.yandex.mapkit.search.SearchManagerType
 import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.SearchType
 import com.yandex.mapkit.search.Session
+import com.yandex.runtime.Error
 
-class MainActivity : ComponentActivity() {
+
+class MainActivity : ComponentActivity(), Session.SearchListener {
+
+    private lateinit var mapView: MapView
+    private lateinit var searchManager: SearchManager
+    private var searchSession: Session? = null
+
+    object placeholderObject {
+        var state  = mutableStateOf(PlaceholderState.NONE)
+        var address = mutableListOf(GeoObjectCollection.Item())
+    }
+
+    object address {
+        val focusOn = mutableStateOf(0)
+        val addressA = mutableStateOf("")
+        val addressB = mutableStateOf("")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         MapKitFactory.initialize(this)
 
         setContent {
-            MapScreen()
+            CaTaxiTheme (dynamicColor = false) {
+                MapScreen()
+            }
         }
+
+        mapView = MapView(this)
+
+        searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED);
+
+    }
+
+    override fun onStart() {
+        mapView.onStart();
+        MapKitFactory.getInstance().onStart();
+        super.onStart()
+    }
+
+    override fun onStop() {
+        mapView.onStop();
+        MapKitFactory.getInstance().onStop();
+        super.onStop()
+    }
+
+    override fun onSearchResponse(response: Response) {
+        if (response.collection.children.isEmpty()){
+            placeholderObject.state.value = PlaceholderState.NOTFOUND
+        }
+        else {
+            placeholderObject.state.value = PlaceholderState.SUCCESS
+        }
+        placeholderObject.address = response.collection.children
+    }
+
+    override fun onSearchError(p0: Error) {
+        Log.e("ok", "ne ok")
+        placeholderObject.state.value = PlaceholderState.ERROR
+    }
+
+    private fun submitQuery(query: String) {
+        searchSession = searchManager.submit(
+            query,
+            VisibleRegionUtils.toPolygon(mapView.mapWindow.map.visibleRegion),
+            SearchOptions().apply {
+                searchTypes = SearchType.GEO.value
+                resultPageSize = 10
+            },
+            this
+        )
     }
 
     @Composable
     fun MapScreen() {
-        val placeholderState = remember { mutableStateOf(0) }
-        val map = remember { mutableStateOf(MapView(this)) }
-
         Box(modifier = Modifier.fillMaxSize()) {
-            MapViewContainer(map.value, modifier = Modifier.fillMaxSize())
+            MapViewContainer(modifier = Modifier.fillMaxSize())
 
             AvatarButton(
                 modifier = Modifier
@@ -98,39 +163,52 @@ class MainActivity : ComponentActivity() {
                     .align(Alignment.TopStart)
             )
 
-            BottomMenu(
-                yandexMap = map.value,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(unbounded = true)
-                    .align(Alignment.BottomCenter)
-                    .shadow(elevation = 50.dp),
-                placeholderState = placeholderState
-            )
 
-            when {
-                placeholderState.value == 1 -> {
-                    Placeholder(Modifier
-                        .align(Alignment.Center),
-                        onClickButton = {
-                            placeholderState.value = 1
-                        },
-                        placeholder = "404",
-                        description = "Ничего не получилось найти",
-                        placeholderState = placeholderState)
+            Column (Modifier
+                .align(Alignment.BottomCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                when (placeholderObject.state.value) {
+                    PlaceholderState.NOTFOUND -> {
+                        Placeholder(Modifier,
+                            onClickButton = {
+                                placeholderObject.state.value = PlaceholderState.NOTFOUND
+                            },
+                            placeholder = "404",
+                            description = "Ничего не получилось найти")
+                    }
+                    PlaceholderState.ERROR -> {
+                        Placeholder(Modifier,
+                            existButton = true,
+                            onClickButton = {
+                                placeholderObject.state.value = PlaceholderState.ERROR
+                            },
+                            placeholder = "Ошибка при поиске",
+                            description = "Попробуйте чуть позже")
+                    }
+
+                    PlaceholderState.SUCCESS -> {
+                        Placeholder(Modifier,
+                            onClickButton = {},
+                            placeholder = "Вот, что получилось найти")
+                    }
+
+                    PlaceholderState.SEARCH -> {
+                        Placeholder(Modifier,
+                            onClickButton = {},
+                            placeholder = "Ищем...")
+                    }
+
+                    PlaceholderState.NONE -> {}
                 }
 
-                placeholderState.value == 2 -> {
-                    Placeholder(Modifier
-                        .align(Alignment.Center),
-                        existButton = true,
-                        onClickButton = {
-                            placeholderState.value = 2
-                        },
-                        placeholder = "Ошибка при поиске",
-                        description = "Попробуйте чуть позже",
-                        placeholderState = placeholderState)
-                }
+                Spacer(Modifier.size(5.dp))
+
+                BottomMenu(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(unbounded = true)
+                )
             }
         }
     }
@@ -139,51 +217,50 @@ class MainActivity : ComponentActivity() {
     fun Placeholder(
         modifier: Modifier = Modifier,
         placeholder: String,
-        description: String,
+        description: String = "",
         existButton: Boolean = false,
-        onClickButton: () -> Unit = {},
-        placeholderState: MutableState<Int>) {
-        Box(Modifier
-            .background(Color(0x80000000))
-            .fillMaxSize()
-            .clickable { placeholderState.value = 0 }
-        ) {
-            Box(modifier = modifier
-                .wrapContentWidth(unbounded = true)
-                .wrapContentHeight(unbounded = true)
-                .background(colorResource(R.color.white0), RoundedCornerShape(20))
-                .shadow(100.dp)
-            )
-            {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = placeholder,
-                        fontSize = 18.sp,
-                        color = Color.Red,
-                        textAlign = TextAlign.Center
-                    )
+        onClickButton: () -> Unit = {}) {
+        Box(modifier = modifier
+            .clip(shape = RoundedCornerShape(16.dp))
+            .fillMaxWidth(0.95f)
+            .wrapContentHeight(unbounded = true)
+            .background(MaterialTheme.colorScheme.background)
+            .border(1.dp, Color.Black, shape = RoundedCornerShape(16.dp))
+        )
+        {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = placeholder,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center
+                )
 
-                    Text(
-                        text = description,
-                        fontSize = 16.sp,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
+                if (placeholderObject.state.value != PlaceholderState.SUCCESS){
+
+                    if (description.isNotEmpty()) {
+                        Text(
+                            text = description,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(){
+                    Row() {
                         if (existButton) {
                             Button(
                                 modifier = Modifier.padding(8.dp),
                                 onClick = onClickButton,
-                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
                                 Text("Обновить")
                             }
@@ -191,11 +268,33 @@ class MainActivity : ComponentActivity() {
 
                         Button(
                             modifier = Modifier.padding(8.dp),
-                            onClick = { placeholderState.value = 0},
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                            onClick = {
+                                placeholderObject.state.value = PlaceholderState.NONE
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text("Закрыть")
                         }
+                    }
+                }
+                else{
+                    for (item in placeholderObject.address){
+                        AddressButton(
+                            onClick = {
+                                placeholderObject.state.value = PlaceholderState.NONE
+                                if (address.focusOn.value == 0){
+                                    address.addressA.value = item.obj?.name.toString()
+                                }
+                                else{
+                                    address.addressB.value = item.obj?.name.toString()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(unbounded = false)
+                                .padding(vertical = 0.dp, horizontal = 0.dp),
+                            addressObj = item
+                        )
                     }
                 }
             }
@@ -203,7 +302,29 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MapViewContainer(yandexMap: MapView, modifier: Modifier = Modifier) {
+    fun AddressButton(
+        modifier: Modifier,
+        onClick: () -> Unit,
+        addressObj: GeoObjectCollection.Item
+    ) {
+        Box(modifier = modifier
+            .clickable(onClick = onClick)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(2.dp)) {
+            Text(
+                text = addressObj.obj?.name.toString(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+            )
+        }
+    }
+
+    @Composable
+    fun MapViewContainer(modifier: Modifier = Modifier) {
         val point = remember { mutableStateOf(Point(55.751574, 37.573856)) }
         val zoom = remember { mutableFloatStateOf(11f) }
         val azimuth = remember { mutableFloatStateOf(0f) }
@@ -211,7 +332,7 @@ class MainActivity : ComponentActivity() {
 
         AndroidView(
             factory = { context ->
-               yandexMap.apply {
+               mapView.apply {
                     map.move(
                         CameraPosition(
                             point.value,
@@ -232,7 +353,8 @@ class MainActivity : ComponentActivity() {
             modifier = modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(colorResource(R.color.red))
+                .border(1.dp, Color.Black, shape = CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
                 .clickable {
                     startActivity(Intent(this@MainActivity, AccountActivity::class.java))
                 },
@@ -247,35 +369,13 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BottomMenu(yandexMap: MapView, modifier: Modifier = Modifier, placeholderState: MutableState<Int>) {
-        val pointA = remember { mutableStateOf("") }
-        val pointB = remember { mutableStateOf("") }
-
-        val searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
-
-        val searchOptions = SearchOptions().apply {
-            searchTypes = SearchType.BIZ.value
-            resultPageSize = 32
-        }
-
-        val searchSessionListener = object : Session.SearchListener {
-            override fun onSearchResponse(response: Response) {
-                Log.e("ffeef", "Fefe")
-                response.collection.children.forEach { obj ->
-                    Log.e("ffeef", "Fefe")
-                }
-            }
-
-            override fun onSearchError(p0: com.yandex.runtime.Error) {
-                Log.e("ffeef", "Fefe")
-            }
-        }
-
+    fun BottomMenu(modifier: Modifier = Modifier) {
         Surface(
             modifier = modifier
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-            color = Color.White,
-            shadowElevation = 8.dp
+                .border(1.dp, Color.Black, shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+            color = MaterialTheme.colorScheme.background,
+            shadowElevation = 8.dp,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -284,30 +384,32 @@ class MainActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceAround
             ) {
-                Text(text = "CaTaxi", color = colorResource(R.color.red))
+                Text(text = "CaTaxi", color = MaterialTheme.colorScheme.primary)
 
-                SearchBar("Точка А", pointA,
+                SearchBar("Точка А", address.addressA,
                     {
-                        pointA.value = it
-                        val session = searchManager.submit(
-                            pointA.value,
-                            VisibleRegionUtils.toPolygon(yandexMap.map.visibleRegion),
-                            searchOptions,
-                            searchSessionListener
-                        )
+                        address.addressA.value = it
+                        if(it.isNotEmpty()) {
+                            placeholderObject.state.value = PlaceholderState.SEARCH
+                            submitQuery(it)
+                        }
+                    },
+                    {
+                        placeholderObject.state.value = PlaceholderState.NONE
+                        address.focusOn.value = 0
                     })
 
-                SearchBar("Точка Б", pointB,
+                SearchBar("Точка Б", address.addressB,
                     {
-                        pointB.value = it
-                        val session = searchManager.submit(
-                            pointB.value,
-                            VisibleRegionUtils.toPolygon(yandexMap.map.visibleRegion),
-                            SearchOptions().apply {
-                                searchTypes = SearchType.BIZ.value
-                            },
-                            searchSessionListener
-                        )
+                        address.addressB.value = it
+                        if(it.isNotEmpty()){
+                            placeholderObject.state.value = PlaceholderState.SEARCH
+                            submitQuery(it)
+                        }
+                    },
+                    {
+                        placeholderObject.state.value = PlaceholderState.NONE
+                        address.focusOn.value = 1
                     })
 
                 TaxiCardPager()
@@ -318,7 +420,7 @@ class MainActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable {  },
+                            .clickable { },
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
@@ -332,18 +434,18 @@ class MainActivity : ComponentActivity() {
 
                     Button(
                         onClick = {
-                            if (pointA.value == ""){
-                                placeholderState.value = 1
+                            if (address.addressA.value.isEmpty() or address.addressB.value.isEmpty()){
+
                             }
                             else{
-                                placeholderState.value = 2
+
                             }
-                                  },
+                        },
                         modifier = Modifier
                             .height(56.dp)
                             .fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.red))
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Заказать", color = Color.White)
                     }
@@ -358,6 +460,7 @@ class MainActivity : ComponentActivity() {
         hint: String,
         searchText: MutableState<String>,
         onValueChange: (String) -> Unit,
+        onFocusChange: (FocusState) -> Unit,
         modifier: Modifier = Modifier
     ) {
         val keyboardController = LocalSoftwareKeyboardController.current
@@ -366,6 +469,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
+                .onFocusChanged(onFocusChange)
         ) {
             OutlinedTextField(
                 value = searchText.value,
@@ -380,8 +484,8 @@ class MainActivity : ComponentActivity() {
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -391,6 +495,7 @@ class MainActivity : ComponentActivity() {
                     onClick = {
                         searchText.value = ""
                         keyboardController?.hide()
+                        placeholderObject.state.value = PlaceholderState.NONE
                     }
                 ) {
                     Icon(imageVector = Icons.Default.Clear, contentDescription = "Очистить")
@@ -405,7 +510,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
-            colors = CardDefaults.cardColors(colorResource(R.color.red)),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primary),
         ) {
             Column(
                 modifier = Modifier
@@ -415,13 +520,13 @@ class MainActivity : ComponentActivity() {
                 Text(
                     text = title,
                     fontSize = 20.sp,
-                    color = colorResource(R.color.white0)
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = description,
                     fontSize = 14.sp,
-                    color = colorResource(R.color.white)
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -445,7 +550,7 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HorizontalPager(
@@ -460,4 +565,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+enum class PlaceholderState {
+    SUCCESS,
+    NONE,
+    NOTFOUND,
+    SEARCH,
+    ERROR
 }

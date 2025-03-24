@@ -1,6 +1,7 @@
 package com.project.cataxi
 
 import android.app.Application
+import com.project.cataxi.ui.theme.CaTaxiTheme
 import com.yandex.mapkit.MapKitFactory
 
 class ApplicationSettings: Application(){

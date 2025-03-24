@@ -7,6 +7,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +42,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.project.cataxi.ui.theme.CaTaxiTheme
 import com.yandex.mapkit.MapKitFactory
 
 class AuthorizationActivity : ComponentActivity() {
@@ -48,8 +51,10 @@ class AuthorizationActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        setContent {
-            LoginAndRegistration()
+        setContent  {
+            CaTaxiTheme (dynamicColor = false) {
+                LoginAndRegistration()
+            }
         }
     }
 
@@ -58,7 +63,8 @@ class AuthorizationActivity : ComponentActivity() {
     fun LoginAndRegistration() {
         val navController = rememberNavController()
 
-        NavHost(navController = navController, startDestination = "login_screen", builder = {
+        NavHost(modifier = Modifier.background(MaterialTheme.colorScheme.background),
+            navController = navController, startDestination = "login_screen", builder = {
             composable(
                 "login_screen",
                 content = { LoginScreen(navController = navController) })
@@ -83,10 +89,10 @@ class AuthorizationActivity : ComponentActivity() {
             verticalArrangement = Arrangement.Center,
         ) {
             Text(text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = colorResource(R.color.dark_red))) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.tertiary)) {
                     append("В")
                 }
-                withStyle(style = SpanStyle(color = colorResource(R.color.dark_gray))) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSecondary)) {
                     append("ойти")
                 }
             }, fontSize = 30.sp)
@@ -106,12 +112,12 @@ class AuthorizationActivity : ComponentActivity() {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 )
             )
             if (emailErrorState.value) {
-                Text(text = "Обязательно поле", color = colorResource(R.color.red))
+                Text(text = "Обязательно поле", color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
             val passwordVisibility = remember { mutableStateOf(true) }
@@ -130,13 +136,13 @@ class AuthorizationActivity : ComponentActivity() {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 ),
                 visualTransformation = if (passwordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
             if (passwordErrorState.value) {
-                Text(text = "Обязательно поле", color = colorResource(R.color.red))
+                Text(text = "Обязательно поле", color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
             Button(
@@ -165,10 +171,9 @@ class AuthorizationActivity : ComponentActivity() {
 
                 },
                 content = {
-                    Text(text = "Войти", color = colorResource(R.color.white0))
+                    Text(text = "Войти")
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(colorResource(R.color.red))
             )
             Spacer(Modifier.size(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -178,7 +183,7 @@ class AuthorizationActivity : ComponentActivity() {
                         launchSingleTop = true
                     }
                 }) {
-                    Text(text = "Зарегистрироваться", color = colorResource(R.color.red))
+                    Text(text = "Зарегистрироваться", color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         }
@@ -210,10 +215,10 @@ class AuthorizationActivity : ComponentActivity() {
         ) {
 
             Text(text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = colorResource(R.color.red))) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.tertiary)) {
                     append("Р")
                 }
-                withStyle(style = SpanStyle(color = colorResource(R.color.dark_gray))) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSecondary)) {
                     append("егистрация")
                 }
             }, fontSize = 30.sp)
@@ -234,12 +239,12 @@ class AuthorizationActivity : ComponentActivity() {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 )
             )
             if (nameErrorState.value) {
-                Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
+                Text(text = "Обяазтельное поле", color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
 
@@ -259,12 +264,12 @@ class AuthorizationActivity : ComponentActivity() {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 )
             )
             if (emailErrorState.value) {
-                Text(text = "Обяазтельное поле", color = colorResource(R.color.red))
+                Text(text = "Обяазтельное поле", color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
 
@@ -285,8 +290,8 @@ class AuthorizationActivity : ComponentActivity() {
                 isError = passwordErrorState.value,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 ),
                 visualTransformation = if (passwordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
@@ -311,8 +316,8 @@ class AuthorizationActivity : ComponentActivity() {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = colorResource(R.color.red),
-                    focusedBorderColor = colorResource(R.color.red)
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 ),
                 visualTransformation = if (cPasswordVisibility.value) PasswordVisualTransformation() else VisualTransformation.None
             )
@@ -324,7 +329,7 @@ class AuthorizationActivity : ComponentActivity() {
                 } else {
                     ""
                 }
-                Text(text = msg, color = colorResource(R.color.red))
+                Text(text = msg, color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
             Button(
@@ -369,7 +374,7 @@ class AuthorizationActivity : ComponentActivity() {
                     Text(text = "Регистрация", color = Color.White)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(colorResource(R.color.red))
+                colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.tertiary)
             )
             Spacer(Modifier.size(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -379,7 +384,7 @@ class AuthorizationActivity : ComponentActivity() {
                         launchSingleTop = true
                     }
                 }) {
-                    Text(text = "Войти", color = colorResource(R.color.red))
+                    Text(text = "Войти", color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         }
