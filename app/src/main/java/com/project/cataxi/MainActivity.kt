@@ -229,10 +229,14 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     }
 
                     PlaceholderState.HISTORY -> {
-                        Placeholder(Modifier,
-                            onClickButton = { },
-                            placeholder = "Что искали ранее",
-                            searchViewModel = searchViewModel)
+                        if (placeholderObject.addressHistory.value.isNotEmpty()){
+                            Placeholder(Modifier,
+                                existButton = true,
+                                buttonName = "Удалить историю",
+                                onClickButton = { searchViewModel.clearHistory()  },
+                                placeholder = "Что искали ранее",
+                                searchViewModel = searchViewModel)
+                        }
                     }
 
                     PlaceholderState.NONE -> {}
@@ -256,6 +260,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         searchViewModel: SearchViewModel,
         description: String = "",
         existButton: Boolean = false,
+        buttonName: String = "Обновить",
         onClickButton: () -> Unit = {}) {
         Box(modifier = modifier
             .clip(shape = RoundedCornerShape(16.dp))
@@ -298,16 +303,6 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     }
 
                     Row() {
-                        if (existButton) {
-                            Button(
-                                modifier = Modifier.padding(8.dp),
-                                onClick = onClickButton,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Text("Обновить")
-                            }
-                        }
-
                         Button(
                             modifier = Modifier.padding(8.dp),
                             onClick = {
@@ -361,6 +356,15 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                                 .padding(vertical = 0.dp, horizontal = 0.dp),
                             addressObj = item.obj?.name.toString()
                         )
+                    }
+                }
+                if (existButton) {
+                    Button(
+                        modifier = Modifier.padding(8.dp),
+                        onClick = onClickButton,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(buttonName)
                     }
                 }
             }
