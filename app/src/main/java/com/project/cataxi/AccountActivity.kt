@@ -1,13 +1,12 @@
 package com.project.cataxi
 
 import android.content.Intent
-import android.content.res.Resources.Theme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -20,20 +19,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,31 +40,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.project.cataxi.ui.theme.CaTaxiTheme
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.observeOn
 
 class AccountActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val settingsDataStore = SettingsDataStore(this)
+        val viewModelFactory = ThemeViewModelFactory(settingsDataStore)
+
         setContent {
-            CaTaxiTheme (dynamicColor = false){
-                AccountScreen()
+            val themeViewModel: ThemeViewModel = viewModel(factory = viewModelFactory)
+            val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
+
+            CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false){
+                AccountScreen(isDarkTheme, themeViewModel)
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun AccountScreen(){
-        val isDark = isSystemInDarkTheme()
-        var darkTheme = remember { mutableStateOf(isDark) }
+    fun AccountScreen(darkTheme: Boolean, themeViewModel: ThemeViewModel){
 
         Box(modifier = Modifier
             .fillMaxSize()
@@ -167,11 +169,14 @@ class AccountActivity : ComponentActivity() {
 
                     Spacer(Modifier.size(10.dp))
 
-                    Toggle(label = "Темная тема", value = darkTheme.value, modifier = Modifier
+                    Toggle(label = "Темная тема", value = darkTheme, modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.secondary)
-                        .height(56.dp)
+                        .height(56.dp),
+                        onCheckedChange = {
+                            themeViewModel.toggleTheme()
+                        }
                     )
                 }
             }
@@ -179,16 +184,14 @@ class AccountActivity : ComponentActivity() {
     }
 
     @Composable
-    fun Toggle(modifier: Modifier, label: String, value: Boolean) {
-        var checked by remember { mutableStateOf(true) }
-
+    fun Toggle(modifier: Modifier, label: String, value: Boolean, onCheckedChange: (Boolean) -> Unit) {
         Box (modifier
             .padding(15.dp)) {
             Text(label, modifier = Modifier.align(Alignment.CenterStart))
 
             Switch(
                 checked = value,
-                onCheckedChange = { checked = it },
+                onCheckedChange = onCheckedChange,
                 modifier = Modifier.align(Alignment.CenterEnd),
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = MaterialTheme.colorScheme.primary,

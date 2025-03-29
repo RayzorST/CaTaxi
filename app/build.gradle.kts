@@ -40,6 +40,10 @@ android {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.compose.foundation:foundation:1.2.0")
     implementation("androidx.navigation:navigation-compose:2.4.0-alpha06")
     implementation("com.yandex.android:maps.mobile:4.5.0-full")

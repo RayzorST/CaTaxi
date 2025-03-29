@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -50,9 +52,15 @@ class AuthorizationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val settingsDataStore = SettingsDataStore(this)
+        val viewModelFactory = ThemeViewModelFactory(settingsDataStore)
+
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         setContent  {
-            CaTaxiTheme (dynamicColor = false) {
+            val themeViewModel: ThemeViewModel = viewModel(factory = viewModelFactory)
+            val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
+
+            CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false) {
                 LoginAndRegistration()
             }
         }

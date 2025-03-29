@@ -37,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -44,9 +45,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,7 +68,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.project.cataxi.ui.theme.CaTaxiTheme
+import com.yandex.mapkit.GeoObject
 import com.yandex.mapkit.GeoObjectCollection
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -77,6 +85,9 @@ import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.SearchType
 import com.yandex.mapkit.search.Session
 import com.yandex.runtime.Error
+import com.yandex.runtime.bindings.Archive
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity(), Session.SearchListener {
@@ -88,6 +99,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     object placeholderObject {
         var state  = mutableStateOf(PlaceholderState.NONE)
         var address = mutableListOf(GeoObjectCollection.Item())
+        lateinit var addressHistory: State<List<String>>
     }
 
     object address {
@@ -101,13 +113,27 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
 
         MapKitFactory.initialize(this)
 
-        setContent {
-            CaTaxiTheme (dynamicColor = false) {
-                MapScreen()
-            }
-        }
+        val settingsDataStore = SettingsDataStore(this)
+        val settingsViewModelFactory = ThemeViewModelFactory(settingsDataStore)
+
+        val searchHistoryDataStore = SearchHistoryDataStore(this)
+        val searchHistoryViewModelFactory = SearchHistoryViewModelFactory(searchHistoryDataStore)
 
         mapView = MapView(this)
+
+        setContent {
+            val themeViewModel: ThemeViewModel = viewModel(factory = settingsViewModelFactory)
+            val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
+
+            val searchViewModel: SearchViewModel = viewModel(factory = searchHistoryViewModelFactory)
+            placeholderObject.addressHistory = searchViewModel.searchHistory.collectAsState()
+
+            mapView.map.isNightModeEnabled = isDarkTheme
+
+            CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false) {
+                MapScreen(searchViewModel)
+            }
+        }
 
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED);
 
@@ -136,7 +162,6 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     }
 
     override fun onSearchError(p0: Error) {
-        Log.e("ok", "ne ok")
         placeholderObject.state.value = PlaceholderState.ERROR
     }
 
@@ -153,7 +178,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     }
 
     @Composable
-    fun MapScreen() {
+    fun MapScreen(searchViewModel: SearchViewModel) {
         Box(modifier = Modifier.fillMaxSize()) {
             MapViewContainer(modifier = Modifier.fillMaxSize())
 
@@ -175,7 +200,8 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                                 placeholderObject.state.value = PlaceholderState.NOTFOUND
                             },
                             placeholder = "404",
-                            description = "Ничего не получилось найти")
+                            description = "Ничего не получилось найти",
+                            searchViewModel = searchViewModel)
                     }
                     PlaceholderState.ERROR -> {
                         Placeholder(Modifier,
@@ -184,19 +210,29 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                                 placeholderObject.state.value = PlaceholderState.ERROR
                             },
                             placeholder = "Ошибка при поиске",
-                            description = "Попробуйте чуть позже")
+                            description = "Попробуйте чуть позже",
+                            searchViewModel = searchViewModel)
                     }
 
                     PlaceholderState.SUCCESS -> {
                         Placeholder(Modifier,
-                            onClickButton = {},
-                            placeholder = "Вот, что получилось найти")
+                            onClickButton = { },
+                            placeholder = "Вот, что получилось найти",
+                            searchViewModel = searchViewModel)
                     }
 
                     PlaceholderState.SEARCH -> {
                         Placeholder(Modifier,
                             onClickButton = {},
-                            placeholder = "Ищем...")
+                            placeholder = "Ищем...",
+                            searchViewModel = searchViewModel)
+                    }
+
+                    PlaceholderState.HISTORY -> {
+                        Placeholder(Modifier,
+                            onClickButton = { },
+                            placeholder = "Что искали ранее",
+                            searchViewModel = searchViewModel)
                     }
 
                     PlaceholderState.NONE -> {}
@@ -217,6 +253,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     fun Placeholder(
         modifier: Modifier = Modifier,
         placeholder: String,
+        searchViewModel: SearchViewModel,
         description: String = "",
         existButton: Boolean = false,
         onClickButton: () -> Unit = {}) {
@@ -241,8 +278,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center
                 )
-
-                if (placeholderObject.state.value != PlaceholderState.SUCCESS){
+                if (placeholderObject.state.value != PlaceholderState.SUCCESS && placeholderObject.state.value != PlaceholderState.HISTORY){
 
                     if (description.isNotEmpty()) {
                         Text(
@@ -254,6 +290,12 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    if (placeholderObject.state.value == PlaceholderState.SEARCH){
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
                     Row() {
                         if (existButton) {
@@ -277,10 +319,34 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                         }
                     }
                 }
-                else{
+                if (placeholderObject.state.value == PlaceholderState.HISTORY){
+                    Log.e("fef", placeholderObject.addressHistory.toString())
+                    for (item in placeholderObject.addressHistory.value){
+                        AddressButton(
+                            onClick = {
+                                Log.e("feffe", item)
+                                searchViewModel.addToHistory(item)
+                                placeholderObject.state.value = PlaceholderState.NONE
+                                if (address.focusOn.value == 0){
+                                    address.addressA.value = item
+                                }
+                                else{
+                                    address.addressB.value = item
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(unbounded = false)
+                                .padding(vertical = 0.dp, horizontal = 0.dp),
+                            addressObj = item
+                        )
+                    }
+                }
+                if (placeholderObject.state.value == PlaceholderState.SUCCESS){
                     for (item in placeholderObject.address){
                         AddressButton(
                             onClick = {
+                                searchViewModel.addToHistory(item.obj?.name.toString())
                                 placeholderObject.state.value = PlaceholderState.NONE
                                 if (address.focusOn.value == 0){
                                     address.addressA.value = item.obj?.name.toString()
@@ -293,7 +359,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                                 .fillMaxWidth()
                                 .wrapContentHeight(unbounded = false)
                                 .padding(vertical = 0.dp, horizontal = 0.dp),
-                            addressObj = item
+                            addressObj = item.obj?.name.toString()
                         )
                     }
                 }
@@ -305,14 +371,14 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     fun AddressButton(
         modifier: Modifier,
         onClick: () -> Unit,
-        addressObj: GeoObjectCollection.Item
+        addressObj: String
     ) {
         Box(modifier = modifier
             .clickable(onClick = onClick)
             .background(MaterialTheme.colorScheme.background)
             .padding(2.dp)) {
             Text(
-                text = addressObj.obj?.name.toString(),
+                text = addressObj,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 softWrap = false,
@@ -331,17 +397,17 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         val tilt = remember { mutableFloatStateOf(0f) }
 
         AndroidView(
-            factory = { context ->
+            factory = { _ ->
                mapView.apply {
-                    map.move(
-                        CameraPosition(
-                            point.value,
-                            zoom.floatValue,
-                            azimuth.floatValue,
-                            tilt.floatValue
-                        )
-                    )
-                }
+                   map.move(
+                       CameraPosition(
+                           point.value,
+                           zoom.floatValue,
+                           azimuth.floatValue,
+                           tilt.floatValue
+                       )
+                   )
+               }
             },
             modifier = modifier
         )
@@ -370,6 +436,8 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
 
     @Composable
     fun BottomMenu(modifier: Modifier = Modifier) {
+        val scope = rememberCoroutineScope()
+
         Surface(
             modifier = modifier
                 .border(1.dp, Color.Black, shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
@@ -389,26 +457,32 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                 SearchBar("Точка А", address.addressA,
                     {
                         address.addressA.value = it
-                        if(it.isNotEmpty()) {
-                            placeholderObject.state.value = PlaceholderState.SEARCH
-                            submitQuery(it)
+                        scope.launch {
+                            while (address.addressA.value.isNotEmpty() && address.addressA.value == it) {
+                                placeholderObject.state.value = PlaceholderState.SEARCH
+                                delay(1000)
+                                submitQuery(it)
+                                delay(2000)
+                            }
                         }
                     },
                     {
-                        placeholderObject.state.value = PlaceholderState.NONE
                         address.focusOn.value = 0
                     })
 
                 SearchBar("Точка Б", address.addressB,
                     {
                         address.addressB.value = it
-                        if(it.isNotEmpty()){
-                            placeholderObject.state.value = PlaceholderState.SEARCH
-                            submitQuery(it)
+                        scope.launch {
+                            while (address.addressB.value.isNotEmpty() && address.addressB.value == it) {
+                                placeholderObject.state.value = PlaceholderState.SEARCH
+                                delay(1000)
+                                submitQuery(it)
+                                delay(2000)
+                            }
                         }
                     },
                     {
-                        placeholderObject.state.value = PlaceholderState.NONE
                         address.focusOn.value = 1
                     })
 
@@ -475,7 +549,16 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                 value = searchText.value,
                 onValueChange = onValueChange,
                 modifier = modifier
-                    .weight(1f),
+                    .weight(1f)
+                    .onFocusChanged {
+                        focusState ->
+                        if (focusState.isFocused) {
+                            placeholderObject.state.value = PlaceholderState.HISTORY
+                        }
+                        else{
+                            placeholderObject.state.value = PlaceholderState.NONE
+                        }
+                    },
                 label = { Text(text = hint) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
@@ -572,5 +655,6 @@ enum class PlaceholderState {
     NONE,
     NOTFOUND,
     SEARCH,
-    ERROR
+    ERROR,
+    HISTORY
 }
