@@ -1,4 +1,4 @@
-package com.project.cataxi.database
+package com.project.cataxi.database.auth
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

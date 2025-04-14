@@ -1,4 +1,4 @@
-package com.project.cataxi.database
+package com.project.cataxi.database.auth
 
 data class LoginRequest(
     val email: String,
@@ -13,5 +13,7 @@ data class RegistrationRequest(
 )
 
 data class AuthResponse(
-    val token: String
+    val token: String,
+    val firstName: String,
+    val secondName: String
 )

@@ -1,4 +1,4 @@
-package com.project.cataxi.database
+package com.project.cataxi.database.auth
 
 import retrofit2.Call
 import retrofit2.http.Body

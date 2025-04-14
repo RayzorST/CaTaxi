@@ -4,11 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,11 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,31 +41,50 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.project.cataxi.datastore.SettingsDataStore
+import com.project.cataxi.datastore.ThemeViewModel
+import com.project.cataxi.datastore.ThemeViewModelFactory
+import com.project.cataxi.datastore.UserDataStore
+import com.project.cataxi.datastore.UserViewModel
+import com.project.cataxi.datastore.UserViewModelFactory
 import com.project.cataxi.ui.theme.CaTaxiTheme
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.observeOn
 
 class AccountActivity : ComponentActivity() {
+    object user {
+        var firstName = mutableStateOf("")
+        var secondName = mutableStateOf("")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val settingsDataStore = SettingsDataStore(this)
         val viewModelFactory = ThemeViewModelFactory(settingsDataStore)
 
+        val userDataStore = UserDataStore(this)
+        val userViewModelFactory = UserViewModelFactory(userDataStore)
+
         setContent {
             val themeViewModel: ThemeViewModel = viewModel(factory = viewModelFactory)
             val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
 
+            val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
+            user.firstName.value = userViewModel.firstName.collectAsState(initial = "").value
+            user.secondName.value = userViewModel.secondName.collectAsState(initial = "").value
+
             CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false){
-                AccountScreen(isDarkTheme, themeViewModel)
+                AccountScreen(isDarkTheme, themeViewModel, userViewModel)
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun AccountScreen(darkTheme: Boolean, themeViewModel: ThemeViewModel){
+    fun AccountScreen(darkTheme: Boolean, themeViewModel: ThemeViewModel, userViewModel: UserViewModel){
+        var firstName by rememberSaveable { mutableStateOf("") }
+        var secondName by rememberSaveable { mutableStateOf("") }
 
         Box(modifier = Modifier
             .fillMaxSize()
@@ -105,7 +121,7 @@ class AccountActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.size(10.dp))
 
-                Text("ФИО", fontSize = 30.sp, color = MaterialTheme.colorScheme.onBackground)
+                Text(user.firstName.value + " " + user.secondName.value, fontSize = 30.sp, color = MaterialTheme.colorScheme.onBackground)
 
                 Column(
                     modifier = Modifier
@@ -113,9 +129,9 @@ class AccountActivity : ComponentActivity() {
                         .padding(16.dp)
                 ) {
                     TextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Фамилия") },
+                        value = firstName,
+                        onValueChange = { firstName = it},
+                        label = { Text("Имя") },
                         modifier = Modifier
                             .fillMaxWidth(),
                         colors = TextFieldDefaults.textFieldColors(
@@ -127,9 +143,9 @@ class AccountActivity : ComponentActivity() {
                         )
                     )
                     TextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Имя") },
+                        value = secondName,
+                        onValueChange = { secondName = it },
+                        label = { Text("Фамилия") },
                         modifier = Modifier
                             .fillMaxWidth(),
                         colors = TextFieldDefaults.textFieldColors(
@@ -141,30 +157,18 @@ class AccountActivity : ComponentActivity() {
                             topEnd = 0.dp
                         )
                     )
-                    TextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Отчество") },
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        )
-                        ,
-                        shape = RoundedCornerShape(
-                            topStart = 0.dp,
-                            topEnd = 0.dp
-                        )
-                    )
+
                     Button(
-                        onClick = { startActivity(Intent(this@AccountActivity, AuthorizationActivity::class.java)) },
+                        onClick = {
+
+                        },
                         modifier = Modifier
                             .height(56.dp)
                             .fillMaxWidth(),
                         shape = RoundedCornerShape(bottomEnd = 12.dp, bottomStart = 12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text("Выйти", color = Color.White)
+                        Text("Сохранить", color = Color.White)
                     }
 
                     Spacer(Modifier.size(10.dp))
@@ -178,6 +182,26 @@ class AccountActivity : ComponentActivity() {
                             themeViewModel.toggleTheme()
                         }
                     )
+                }
+                Column(
+                    modifier = Modifier
+                    .weight(1f)
+                    .padding(16.dp),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Button(
+                        onClick = {
+                            userViewModel.clear()
+                            startActivity(Intent(this@AccountActivity, AuthorizationActivity::class.java))
+                        },
+                        modifier = Modifier
+                            .height(56.dp)
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Выйти", color = Color.White)
+                    }
                 }
             }
         }

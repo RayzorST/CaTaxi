@@ -12,5 +12,7 @@ data class RegistrationReceiveRemote(
 
 @Serializable
 data class RegistrationResponseRemote(
-    val token: String
+    val token: String,
+    val firstName: String,
+    val secondName: String
 )

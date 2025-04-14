@@ -22,5 +22,4 @@ fun Application.module() {
     configureSerialization()
     configureLoginRouting()
     configureRegistrationRouting()
-    configureRouting()
 }

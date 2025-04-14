@@ -24,6 +24,8 @@ fun Application.configureRegistrationRouting() {
             }
             else{
                 val token = UUID.randomUUID().toString()
+                val firstName = receive.firstName
+                val secondName = receive.secondName
                 try {
                     Users.insert(
                         UserDTO(
@@ -44,7 +46,7 @@ fun Application.configureRegistrationRouting() {
                         token = token
                     )
                 )
-                call.respond(RegistrationResponseRemote(token))
+                call.respond(RegistrationResponseRemote(token, firstName, secondName))
             }
         }
     }

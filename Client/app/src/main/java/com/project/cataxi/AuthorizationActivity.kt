@@ -30,11 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -44,12 +42,17 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.project.cataxi.database.ApiClient
-import com.project.cataxi.database.AuthResponse
-import com.project.cataxi.database.LoginRequest
-import com.project.cataxi.database.RegistrationRequest
+import com.project.cataxi.database.auth.ApiClient
+import com.project.cataxi.database.auth.AuthResponse
+import com.project.cataxi.database.auth.LoginRequest
+import com.project.cataxi.database.auth.RegistrationRequest
+import com.project.cataxi.datastore.SettingsDataStore
+import com.project.cataxi.datastore.ThemeViewModel
+import com.project.cataxi.datastore.ThemeViewModelFactory
+import com.project.cataxi.datastore.UserDataStore
+import com.project.cataxi.datastore.UserViewModel
+import com.project.cataxi.datastore.UserViewModelFactory
 import com.project.cataxi.ui.theme.CaTaxiTheme
-import com.yandex.mapkit.MapKitFactory
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -62,36 +65,45 @@ class AuthorizationActivity : ComponentActivity() {
         val settingsDataStore = SettingsDataStore(this)
         val viewModelFactory = ThemeViewModelFactory(settingsDataStore)
 
+        val userDataStore = UserDataStore(this)
+        val userViewModelFactory = UserViewModelFactory(userDataStore)
+
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         setContent  {
             val themeViewModel: ThemeViewModel = viewModel(factory = viewModelFactory)
             val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
 
+            val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
+            val userToken by userViewModel.token.collectAsState(initial = "")
+
+            if (userToken.isNotEmpty()){
+                startActivity(Intent(this@AuthorizationActivity, MainActivity::class.java))
+            }
             CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false) {
-                LoginAndRegistration()
+                LoginAndRegistration(userViewModel)
             }
         }
     }
 
 
     @Composable
-    fun LoginAndRegistration() {
+    fun LoginAndRegistration(userViewModel: UserViewModel) {
         val navController = rememberNavController()
 
         NavHost(modifier = Modifier.background(MaterialTheme.colorScheme.background),
             navController = navController, startDestination = "login_screen", builder = {
             composable(
                 "login_screen",
-                content = { LoginScreen(navController = navController) })
+                content = { LoginScreen(navController, userViewModel) })
             composable(
                 "register_screen",
-                content = { RegistrationScreen(navController = navController) })
+                content = { RegistrationScreen(navController, userViewModel) })
         })
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun LoginScreen(navController: NavController) {
+    fun LoginScreen(navController: NavController, userViewModel: UserViewModel) {
         val context = LocalContext.current
         var email by rememberSaveable { mutableStateOf("") }
         val emailErrorState = remember { mutableStateOf(false) }
@@ -182,6 +194,10 @@ class AuthorizationActivity : ComponentActivity() {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
                                 ) {
                                     if (response.isSuccessful){
+                                        userViewModel.set(
+                                            response.body()?.token.toString(),
+                                            response.body()?.firstName.toString(),
+                                            response.body()?.secondName.toString())
                                         Toast.makeText(
                                             context,
                                             "Успешная авторизация",
@@ -199,7 +215,6 @@ class AuthorizationActivity : ComponentActivity() {
                                 }
 
                                 override fun onFailure(call: Call<AuthResponse>, t: Throwable) {
-                                    Log.e("fef", t.message.toString())
                                     Toast.makeText(
                                         context,
                                         "Ошибка сети: ${t.message}",
@@ -232,16 +247,16 @@ class AuthorizationActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun RegistrationScreen(navController: NavController) {
+    fun RegistrationScreen(navController: NavController, userViewModel: UserViewModel) {
         val context = LocalContext.current
-        var name by rememberSaveable {
-            mutableStateOf("")
-        }
+        var firstName by rememberSaveable { mutableStateOf("") }
+        var secondName by rememberSaveable { mutableStateOf("") }
         var email by rememberSaveable { mutableStateOf("") }
         var password by rememberSaveable { mutableStateOf("") }
         var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-        val nameErrorState = remember { mutableStateOf(false) }
+        val firstNameErrorState = remember { mutableStateOf(false) }
+        val secondNameErrorState = remember { mutableStateOf(false) }
         val emailErrorState = remember { mutableStateOf(false) }
         val passwordErrorState = remember { mutableStateOf(false) }
         val confirmPasswordErrorState = remember { mutableStateOf(false) }
@@ -264,17 +279,18 @@ class AuthorizationActivity : ComponentActivity() {
                 }
             }, fontSize = 30.sp)
             Spacer(Modifier.size(16.dp))
+
             OutlinedTextField(
-                value = name,
+                value = firstName,
                 onValueChange = {
-                    if (nameErrorState.value) {
-                        nameErrorState.value = false
+                    if (firstNameErrorState.value) {
+                        firstNameErrorState.value = false
                     }
-                    name = it
+                    firstName = it
                 },
 
                 modifier = Modifier.fillMaxWidth(),
-                isError = nameErrorState.value,
+                isError = firstNameErrorState.value,
                 label = {
                     Text(text = "Имя*")
                 },
@@ -284,7 +300,32 @@ class AuthorizationActivity : ComponentActivity() {
                     focusedBorderColor = MaterialTheme.colorScheme.tertiary
                 )
             )
-            if (nameErrorState.value) {
+            if (firstNameErrorState.value) {
+                Text(text = "Обяазтельное поле", color = MaterialTheme.colorScheme.tertiary)
+            }
+            Spacer(Modifier.size(16.dp))
+
+            OutlinedTextField(
+                value = secondName,
+                onValueChange = {
+                    if (secondNameErrorState.value) {
+                        secondNameErrorState.value = false
+                    }
+                    secondName = it
+                },
+
+                modifier = Modifier.fillMaxWidth(),
+                isError = secondNameErrorState.value,
+                label = {
+                    Text(text = "Фамилия*")
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = MaterialTheme.colorScheme.tertiary,
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary
+                )
+            )
+            if (secondNameErrorState.value) {
                 Text(text = "Обяазтельное поле", color = MaterialTheme.colorScheme.tertiary)
             }
             Spacer(Modifier.size(16.dp))
@@ -377,11 +418,11 @@ class AuthorizationActivity : ComponentActivity() {
                 shape = RoundedCornerShape(12.dp),
                 onClick = {
                     when {
-                        name.length < 3 || name.length > 25 -> {
-                            nameErrorState.value = true
+                        firstName.length < 3 || firstName.length > 25 -> {
+                            firstNameErrorState.value = true
                         }
 
-                        email.length < 3 || email.length > 25 -> {
+                        email.length < 3 || email.length > 25 || !email.contains("@") -> {
                             emailErrorState.value = true
                         }
 
@@ -397,12 +438,16 @@ class AuthorizationActivity : ComponentActivity() {
                             passwordErrorState.value = false
                             emailErrorState.value = false
 
-                            val call = ApiClient.authApi.registration(RegistrationRequest(email, password, name, name))
+                            val call = ApiClient.authApi.registration(RegistrationRequest(email, password, firstName, secondName))
 
                             call.enqueue(object: Callback<AuthResponse> {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
                                 ) {
                                     if (response.isSuccessful){
+                                        userViewModel.set(
+                                            response.body()?.token.toString(),
+                                            response.body()?.firstName.toString(),
+                                            response.body()?.secondName.toString())
                                         Toast.makeText(
                                             context,
                                             "Успешная регистрация",
@@ -420,7 +465,6 @@ class AuthorizationActivity : ComponentActivity() {
                                 }
 
                                 override fun onFailure(call: Call<AuthResponse>, t: Throwable) {
-                                    Log.e("fef", t.message.toString())
                                     Toast.makeText(
                                         context,
                                         "Ошибка сети: ${t.message}",

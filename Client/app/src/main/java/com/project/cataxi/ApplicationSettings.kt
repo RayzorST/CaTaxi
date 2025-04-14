@@ -1,10 +1,6 @@
 package com.project.cataxi
 
 import android.app.Application
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import com.project.cataxi.ui.theme.CaTaxiTheme
 import com.yandex.mapkit.MapKitFactory
 
 class ApplicationSettings: Application(){

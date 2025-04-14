@@ -1,16 +1,13 @@
-package com.project.cataxi
+package com.project.cataxi.datastore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.yandex.mapkit.GeoObjectCollection
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -66,6 +63,65 @@ class SearchHistoryDataStore(private val context: Context) {
     suspend fun clearHistory() {
         context.searchHistoryDataStore.edit { preferences ->
             preferences.remove(SEARCH_HISTORY)
+        }
+    }
+}
+
+val Context.userDataStore by preferencesDataStore(name = "user")
+
+class UserDataStore(private val context: Context) {
+    companion object {
+        val FIRST_NAME = stringPreferencesKey("first_name")
+        val SECOND_NAME = stringPreferencesKey("second_name")
+        val TOKEN = stringPreferencesKey("token")
+    }
+
+    val getToken: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[TOKEN]?.toString() ?: ""
+        }
+
+    val getFirstName: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[FIRST_NAME]?.toString() ?: ""
+        }
+
+    val getSecondName: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[SECOND_NAME]?.toString() ?: ""
+        }
+
+    suspend fun set(token: String, firstName: String, secondName: String){
+        context.dataStore.edit { preferences ->
+            preferences[TOKEN] = token
+            preferences[FIRST_NAME] = firstName
+            preferences[SECOND_NAME] = secondName
+        }
+    }
+
+    suspend fun setToken(token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[TOKEN] = token
+        }
+    }
+
+    suspend fun setFirstName(firstName: String) {
+        context.dataStore.edit { preferences ->
+            preferences[FIRST_NAME] = firstName
+        }
+    }
+
+    suspend fun setSecondName(secondName: String) {
+        context.dataStore.edit { preferences ->
+            preferences[SECOND_NAME] = secondName
+        }
+    }
+
+    suspend fun clear() {
+        context.dataStore.edit { preferences ->
+            preferences[TOKEN] = ""
+            preferences[FIRST_NAME] = ""
+            preferences[SECOND_NAME] = ""
         }
     }
 }
