@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.project.cataxi.database.auth.ApiClient
 import com.project.cataxi.datastore.SettingsDataStore
 import com.project.cataxi.datastore.ThemeViewModel
 import com.project.cataxi.datastore.ThemeViewModelFactory
@@ -160,7 +161,15 @@ class AccountActivity : ComponentActivity() {
 
                     Button(
                         onClick = {
+                            //val call = ApiClient.authApi.
 
+                            if (firstName.isNotEmpty() && firstName != user.firstName.value){
+
+                            }
+
+                            if (secondName.isNotEmpty() && secondName != user.secondName.value){
+
+                            }
                         },
                         modifier = Modifier
                             .height(56.dp)

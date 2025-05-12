@@ -1,7 +1,10 @@
 package com.project.cataxi.datastore
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yandex.mapkit.geometry.Point
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +23,8 @@ class ThemeViewModel(private val dataStore: SettingsDataStore) : ViewModel() {
 }
 
 class SearchViewModel(private val dataStore: SearchHistoryDataStore) : ViewModel() {
-    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
-    val searchHistory: StateFlow<List<String>> = _searchHistory
+    private val _searchHistory = MutableStateFlow<List<SearchHistoryDataStore.SearchHistoryItem>>(emptyList())
+    val searchHistory: StateFlow<List<SearchHistoryDataStore.SearchHistoryItem>> = _searchHistory
 
     init {
         loadHistory()
@@ -36,9 +39,10 @@ class SearchViewModel(private val dataStore: SearchHistoryDataStore) : ViewModel
         }
     }
 
-    fun addToHistory(query: String) {
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    fun addToHistory(query: String, point: Point? = null) {
         viewModelScope.launch {
-            dataStore.addSearchQuery(query)
+            dataStore.addSearchQuery(query, point)
         }
     }
 

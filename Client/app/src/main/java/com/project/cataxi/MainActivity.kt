@@ -1,9 +1,12 @@
 package com.project.cataxi
 
 import android.content.Intent
+import android.graphics.PointF
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -72,10 +75,12 @@ import com.project.cataxi.datastore.SettingsDataStore
 import com.project.cataxi.datastore.ThemeViewModel
 import com.project.cataxi.datastore.ThemeViewModelFactory
 import com.project.cataxi.ui.theme.CaTaxiTheme
+import com.yandex.mapkit.Animation
 import com.yandex.mapkit.GeoObjectCollection
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.VisibleRegionUtils
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.mapkit.search.Response
@@ -86,6 +91,7 @@ import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.SearchType
 import com.yandex.mapkit.search.Session
 import com.yandex.runtime.Error
+import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -99,7 +105,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
     object placeholderObject {
         var state  = mutableStateOf(PlaceholderState.NONE)
         var address = mutableListOf(GeoObjectCollection.Item())
-        lateinit var addressHistory: State<List<String>>
+        lateinit var addressHistory: State<List<SearchHistoryDataStore.SearchHistoryItem>>
     }
 
     object address {
@@ -108,6 +114,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         val addressB = mutableStateOf("")
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -177,6 +184,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         )
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     @Composable
     fun MapScreen(searchViewModel: SearchViewModel) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -253,6 +261,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     @Composable
     fun Placeholder(
         modifier: Modifier = Modifier,
@@ -318,20 +327,30 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     for (item in placeholderObject.addressHistory.value){
                         AddressButton(
                             onClick = {
-                                searchViewModel.addToHistory(item)
+                                mapView.map.move(
+                                    CameraPosition(item.point!!, 15.0f, 0.0f, 0.0f),
+                                    Animation(Animation.Type.SMOOTH, 1f),
+                                    null
+                                )
+                                mapView.mapWindow.map.mapObjects.addPlacemark().apply {
+                                    geometry = item.point
+                                    setText("ffefe")
+                                }
+
+                                searchViewModel.addToHistory(item.query, item.point)
                                 placeholderObject.state.value = PlaceholderState.NONE
                                 if (address.focusOn.value == 0){
-                                    address.addressA.value = item
+                                    address.addressA.value = item.query
                                 }
                                 else{
-                                    address.addressB.value = item
+                                    address.addressB.value = item.query
                                 }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight(unbounded = false)
                                 .padding(vertical = 0.dp, horizontal = 0.dp),
-                            addressObj = item
+                            addressObj = item.query
                         )
                     }
                 }
@@ -339,7 +358,17 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                     for (item in placeholderObject.address){
                         AddressButton(
                             onClick = {
-                                searchViewModel.addToHistory(item.obj?.name.toString())
+                                mapView.map.move(
+                                    CameraPosition(item.obj?.geometry!![0].point!!, 15.0f, 0.0f, 0.0f),
+                                    Animation(Animation.Type.SMOOTH, 1f),
+                                    null
+                                )
+                                mapView.mapWindow.map.mapObjects.addPlacemark().apply {
+                                    geometry = item.obj?.geometry!![0].point!!
+                                    setText("ffefe")
+                                }
+
+                                searchViewModel.addToHistory(item.obj?.name.toString(), item.obj?.geometry!![0].point!!)
                                 placeholderObject.state.value = PlaceholderState.NONE
                                 if (address.focusOn.value == 0){
                                     address.addressA.value = item.obj?.name.toString()

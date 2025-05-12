@@ -1,6 +1,7 @@
 package com.project
 
 import com.project.login.configureLoginRouting
+import com.project.order.configureOrderRouting
 import com.project.registration.configureRegistrationRouting
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
@@ -22,4 +23,5 @@ fun Application.module() {
     configureSerialization()
     configureLoginRouting()
     configureRegistrationRouting()
+    configureOrderRouting()
 }

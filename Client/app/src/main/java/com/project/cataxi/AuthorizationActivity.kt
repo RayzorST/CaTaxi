@@ -417,6 +417,7 @@ class AuthorizationActivity : ComponentActivity() {
             Button(
                 shape = RoundedCornerShape(12.dp),
                 onClick = {
+                    Log.e("efe", email.contains("@").toString())
                     when {
                         firstName.length < 3 || firstName.length > 25 -> {
                             firstNameErrorState.value = true
