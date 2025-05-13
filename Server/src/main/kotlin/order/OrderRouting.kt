@@ -44,7 +44,7 @@ fun Application.configureOrderRouting() {
 
         }
 
-        get("/order") {
+        post("/order-get") {
             val receive = call.receive<OrderReceiveRemote>()
             val ordersRR: ArrayList<OrderResponseRemote> = arrayListOf()
             try{

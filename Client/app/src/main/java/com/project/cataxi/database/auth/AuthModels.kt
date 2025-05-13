@@ -17,3 +17,12 @@ data class AuthResponse(
     val firstName: String,
     val secondName: String
 )
+
+data class TokenRequest(
+    val email: String,
+    val token: String
+)
+
+data class TokenResponse(
+    val verified: Boolean
+)

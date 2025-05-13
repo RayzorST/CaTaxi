@@ -1,5 +1,7 @@
-package com.project.cataxi.database.auth
+package com.project.cataxi.database
 
+import com.project.cataxi.database.auth.AuthApi
+import com.project.cataxi.database.orders.OrdersApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -12,4 +14,6 @@ object ApiClient {
         .build()
 
     val authApi: AuthApi = retrofit.create(AuthApi::class.java)
+
+    val ordersApi: OrdersApi = retrofit.create(OrdersApi::class.java)
 }

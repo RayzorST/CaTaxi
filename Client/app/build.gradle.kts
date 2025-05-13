@@ -51,6 +51,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.2.0")
     implementation("androidx.navigation:navigation-compose:2.4.0-alpha06")
     implementation("com.yandex.android:maps.mobile:4.5.0-full")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

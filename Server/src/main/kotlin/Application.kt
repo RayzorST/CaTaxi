@@ -3,6 +3,7 @@ package com.project
 import com.project.login.configureLoginRouting
 import com.project.order.configureOrderRouting
 import com.project.registration.configureRegistrationRouting
+import com.project.token.configureTokenRouting
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -24,4 +25,5 @@ fun Application.module() {
     configureLoginRouting()
     configureRegistrationRouting()
     configureOrderRouting()
+    configureTokenRouting()
 }

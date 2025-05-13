@@ -56,6 +56,7 @@ class SearchViewModel(private val dataStore: SearchHistoryDataStore) : ViewModel
 class UserViewModel(private val dataStore: UserDataStore) : ViewModel() {
     val firstName: Flow<String> = dataStore.getFirstName
     val secondName: Flow<String> = dataStore.getSecondName
+    val email: Flow<String> = dataStore.getEmail
     val token: Flow<String> = dataStore.getToken
 
     fun setToken(token: String){
@@ -76,9 +77,15 @@ class UserViewModel(private val dataStore: UserDataStore) : ViewModel() {
         }
     }
 
-    fun set(token: String, firstName: String, secondName: String) {
+    fun setEmail(email: String){
         viewModelScope.launch {
-            dataStore.set(token, firstName, secondName)
+            dataStore.setToken(email)
+        }
+    }
+
+    fun set(token: String, firstName: String, secondName: String, email: String) {
+        viewModelScope.launch {
+            dataStore.set(token, firstName, secondName, email)
         }
     }
 

@@ -42,10 +42,12 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.project.cataxi.database.auth.ApiClient
+import com.project.cataxi.database.ApiClient
 import com.project.cataxi.database.auth.AuthResponse
 import com.project.cataxi.database.auth.LoginRequest
 import com.project.cataxi.database.auth.RegistrationRequest
+import com.project.cataxi.database.auth.TokenRequest
+import com.project.cataxi.database.auth.TokenResponse
 import com.project.cataxi.datastore.SettingsDataStore
 import com.project.cataxi.datastore.ThemeViewModel
 import com.project.cataxi.datastore.ThemeViewModelFactory
@@ -75,9 +77,34 @@ class AuthorizationActivity : ComponentActivity() {
 
             val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
             val userToken by userViewModel.token.collectAsState(initial = "")
+            val userEmail by userViewModel.email.collectAsState(initial = "")
 
             if (userToken.isNotEmpty()){
-                startActivity(Intent(this@AuthorizationActivity, MainActivity::class.java))
+                val call = ApiClient.authApi.token(TokenRequest(userEmail, userToken))
+
+                call.enqueue(object: Callback<TokenResponse> {
+                    override fun onResponse(call: Call<TokenResponse>, response: Response<TokenResponse>
+                    ) {
+                        if (response.isSuccessful){
+                            startActivity(Intent(this@AuthorizationActivity, MainActivity::class.java))
+                        }
+                        else{
+                            Toast.makeText(
+                                this@AuthorizationActivity,
+                                response.message(),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<TokenResponse>, t: Throwable) {
+                        Toast.makeText(
+                            this@AuthorizationActivity,
+                            "Ошибка сети: ${t.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                })
             }
             CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false) {
                 LoginAndRegistration(userViewModel)
@@ -197,7 +224,8 @@ class AuthorizationActivity : ComponentActivity() {
                                         userViewModel.set(
                                             response.body()?.token.toString(),
                                             response.body()?.firstName.toString(),
-                                            response.body()?.secondName.toString())
+                                            response.body()?.secondName.toString(),
+                                            email)
                                         Toast.makeText(
                                             context,
                                             "Успешная авторизация",
@@ -448,7 +476,8 @@ class AuthorizationActivity : ComponentActivity() {
                                         userViewModel.set(
                                             response.body()?.token.toString(),
                                             response.body()?.firstName.toString(),
-                                            response.body()?.secondName.toString())
+                                            response.body()?.secondName.toString(),
+                                            email)
                                         Toast.makeText(
                                             context,
                                             "Успешная регистрация",

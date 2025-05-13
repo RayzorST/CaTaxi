@@ -110,6 +110,7 @@ class UserDataStore(private val context: Context) {
         val FIRST_NAME = stringPreferencesKey("first_name")
         val SECOND_NAME = stringPreferencesKey("second_name")
         val TOKEN = stringPreferencesKey("token")
+        val EMAIL = stringPreferencesKey("email")
     }
 
     val getToken: Flow<String> = context.dataStore.data
@@ -127,11 +128,17 @@ class UserDataStore(private val context: Context) {
             preferences[SECOND_NAME]?.toString() ?: ""
         }
 
-    suspend fun set(token: String, firstName: String, secondName: String){
+    val getEmail: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[EMAIL]?.toString() ?: ""
+        }
+
+    suspend fun set(token: String, firstName: String, secondName: String, email: String){
         context.dataStore.edit { preferences ->
             preferences[TOKEN] = token
             preferences[FIRST_NAME] = firstName
             preferences[SECOND_NAME] = secondName
+            preferences[EMAIL] = email
         }
     }
 
