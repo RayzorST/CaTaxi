@@ -5,6 +5,9 @@ data class OrdersGetRequest(
 )
 
 data class OrdersPostRequest(
+        val typeCar: String,
+        val pointA: String,
+        val pointB: String,
         val user: String
 )
 

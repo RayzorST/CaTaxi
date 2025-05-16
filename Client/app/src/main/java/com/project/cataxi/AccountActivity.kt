@@ -71,7 +71,7 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class AccountActivity : ComponentActivity() {
-    object user {
+    private object user {
         var firstName = mutableStateOf("")
         var secondName = mutableStateOf("")
         val email = mutableStateOf("")
@@ -116,7 +116,6 @@ class AccountActivity : ComponentActivity() {
                 if (response.isSuccessful){
                     orders = orders.toMutableList().apply { clear() }
                     for (item in response.body()?.orders!!){
-                        Log.e("fefef", item.closedAt.toString())
                         orders = orders.toMutableList().apply { add(item) }
                     }
                 }

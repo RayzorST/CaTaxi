@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.PointF
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -68,12 +71,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.project.cataxi.database.ApiClient
+import com.project.cataxi.database.orders.OrdersPostRequest
+import com.project.cataxi.database.orders.OrdersResponse
 import com.project.cataxi.datastore.SearchHistoryDataStore
 import com.project.cataxi.datastore.SearchHistoryViewModelFactory
 import com.project.cataxi.datastore.SearchViewModel
 import com.project.cataxi.datastore.SettingsDataStore
 import com.project.cataxi.datastore.ThemeViewModel
 import com.project.cataxi.datastore.ThemeViewModelFactory
+import com.project.cataxi.datastore.UserDataStore
+import com.project.cataxi.datastore.UserViewModel
+import com.project.cataxi.datastore.UserViewModelFactory
 import com.project.cataxi.ui.theme.CaTaxiTheme
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.GeoObjectCollection
@@ -94,24 +103,31 @@ import com.yandex.runtime.Error
 import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
 
 
 class MainActivity : ComponentActivity(), Session.SearchListener {
-
     private lateinit var mapView: MapView
     private lateinit var searchManager: SearchManager
     private var searchSession: Session? = null
 
-    object placeholderObject {
+    private object placeholderObject {
         var state  = mutableStateOf(PlaceholderState.NONE)
         var address = mutableListOf(GeoObjectCollection.Item())
         lateinit var addressHistory: State<List<SearchHistoryDataStore.SearchHistoryItem>>
     }
 
-    object address {
+    private object address {
         val focusOn = mutableStateOf(0)
         val addressA = mutableStateOf("")
         val addressB = mutableStateOf("")
+    }
+
+    private object user {
+        var firstName = mutableStateOf("")
+        var secondName = mutableStateOf("")
+        val email = mutableStateOf("")
     }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -126,6 +142,9 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         val searchHistoryDataStore = SearchHistoryDataStore(this)
         val searchHistoryViewModelFactory = SearchHistoryViewModelFactory(searchHistoryDataStore)
 
+        val userDataStore = UserDataStore(this)
+        val userViewModelFactory = UserViewModelFactory(userDataStore)
+
         mapView = MapView(this)
 
         setContent {
@@ -134,6 +153,9 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
 
             val searchViewModel: SearchViewModel = viewModel(factory = searchHistoryViewModelFactory)
             placeholderObject.addressHistory = searchViewModel.searchHistory.collectAsState()
+
+            val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
+            user.email.value = userViewModel.email.collectAsState(initial = "").value
 
             mapView.map.isNightModeEnabled = isDarkTheme
 
@@ -465,9 +487,23 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun BottomMenu(modifier: Modifier = Modifier) {
+        val context = LocalContext.current
         val scope = rememberCoroutineScope()
+        val taxiTypes = listOf(
+            "Микроавтобус" to "Вместимость: до 1,5 тонн или 10-15 м³",
+            "Газель" to "Вместимость: до 2 тонн или 16-20 м³",
+            "Бортовая Газель" to "Вместимость: до 3 тонн или 20-25 м³",
+            "Рефрижератор" to "Вместимость: до 1,5 тонн или 10-15 м³",
+            "Грузовик (5-10 тонн)" to "Вместимость: до 10 тонн или 40-50 м³",
+            "Фургон (до 20 тонн)" to "Вместимость: до 20 тонн или 80-100 м³"
+        )
+        val pagerState = rememberPagerState(pageCount = {
+            taxiTypes.size
+        })
+
 
         Surface(
             modifier = modifier
@@ -517,7 +553,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
                         address.focusOn.value = 1
                     })
 
-                TaxiCardPager()
+                TaxiCardPager(pagerState, taxiTypes)
 
                 Row(modifier = Modifier
                     .fillMaxWidth()
@@ -539,11 +575,53 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
 
                     Button(
                         onClick = {
-                            if (address.addressA.value.isEmpty() or address.addressB.value.isEmpty()){
+                            if (address.addressA.value.isNotEmpty() and address.addressB.value.isNotEmpty()){
+                                val call = ApiClient.ordersApi.post(OrdersPostRequest(
+                                    taxiTypes[pagerState.currentPage].first,
+                                    address.addressA.value,
+                                    address.addressB.value,
+                                    user.email.value)
+                                )
 
+                                call.enqueue(object: Callback<OrdersResponse> {
+                                    override fun onResponse(call: Call<OrdersResponse>, response: retrofit2.Response<OrdersResponse>
+                                    ) {
+                                        if (response.isSuccessful){
+                                            Toast.makeText(
+                                                context,
+                                                "Заказ создан",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        else{
+                                            Toast.makeText(
+                                                context,
+                                                "Ошибка",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+
+                                    override fun onFailure(call: Call<OrdersResponse>, t: Throwable) {
+                                        Toast.makeText(
+                                            context,
+                                            "Ошибка сети: ${t.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                                Toast.makeText(
+                                    context,
+                                    "Заказ создан",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                             else{
-
+                                Toast.makeText(
+                                    context,
+                                    "Не заполнены адреса/ов",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         },
                         modifier = Modifier
@@ -648,19 +726,7 @@ class MainActivity : ComponentActivity(), Session.SearchListener {
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    fun TaxiCardPager() {
-        val taxiTypes = listOf(
-            "Микроавтобус" to "Вместимость: до 1,5 тонн или 10-15 м³",
-            "Газель" to "Вместимость: до 2 тонн или 16-20 м³",
-            "Бортовая Газель" to "Вместимость: до 3 тонн или 20-25 м³",
-            "Рефрижератор" to "Вместимость: до 1,5 тонн или 10-15 м³",
-            "Грузовик (5-10 тонн)" to "Вместимость: до 10 тонн или 40-50 м³",
-            "Фургон (до 20 тонн)" to "Вместимость: до 20 тонн или 80-100 м³"
-        )
-        val pagerState = rememberPagerState(pageCount = {
-            taxiTypes.size
-        })
-
+    fun TaxiCardPager(pagerState: PagerState, taxiTypes: List<Pair<String, String>>) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
