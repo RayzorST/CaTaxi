@@ -56,6 +56,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.project.cataxi.database.ApiClient
 import com.project.cataxi.database.auth.AuthResponse
+import com.project.cataxi.database.auth.ChangeUserNameRequest
+import com.project.cataxi.database.auth.ChangeUserNameResponse
+import com.project.cataxi.database.auth.TokenResponse
 import com.project.cataxi.database.orders.OrderResponse
 import com.project.cataxi.database.orders.OrdersGetRequest
 import com.project.cataxi.database.orders.OrdersResponse
@@ -71,12 +74,6 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class AccountActivity : ComponentActivity() {
-    private object user {
-        var firstName = mutableStateOf("")
-        var secondName = mutableStateOf("")
-        val email = mutableStateOf("")
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -91,9 +88,6 @@ class AccountActivity : ComponentActivity() {
             val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
 
             val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
-            user.firstName.value = userViewModel.firstName.collectAsState(initial = "").value
-            user.secondName.value = userViewModel.secondName.collectAsState(initial = "").value
-            user.email.value = userViewModel.email.collectAsState(initial = "").value
 
             CaTaxiTheme (darkTheme = isDarkTheme, dynamicColor = false){
                 AccountScreen(isDarkTheme, themeViewModel, userViewModel)
@@ -105,10 +99,16 @@ class AccountActivity : ComponentActivity() {
     @Composable
     fun AccountScreen(darkTheme: Boolean, themeViewModel: ThemeViewModel, userViewModel: UserViewModel){
         val context = LocalContext.current
+
+        val userFirstName by userViewModel.firstName.collectAsState(initial = "")
+        val userSecondName by userViewModel.secondName.collectAsState(initial = "")
+        val email by userViewModel.email.collectAsState(initial = "")
+
+
         var firstName by rememberSaveable { mutableStateOf("") }
         var secondName by rememberSaveable { mutableStateOf("") }
         var orders by remember { mutableStateOf(emptyList<OrderResponse>()) }
-        val call = ApiClient.ordersApi.get(OrdersGetRequest(user.email.value))
+        val call = ApiClient.ordersApi.get(OrdersGetRequest(email))
 
         call.enqueue(object: Callback<OrdersResponse> {
             override fun onResponse(call: Call<OrdersResponse>, response: Response<OrdersResponse>
@@ -172,7 +172,7 @@ class AccountActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.size(10.dp))
 
-                Text(user.firstName.value + " " + user.secondName.value, fontSize = 30.sp, color = MaterialTheme.colorScheme.onBackground)
+                Text(userFirstName + " " + userSecondName, fontSize = 30.sp, color = MaterialTheme.colorScheme.onBackground)
 
                 Column(
                     modifier = Modifier
@@ -212,14 +212,33 @@ class AccountActivity : ComponentActivity() {
 
                     Button(
                         onClick = {
-                            //val call = ApiClient.authApi.
+                            if (firstName.isNotEmpty() || secondName.isNotEmpty()){
+                                val call = ApiClient.authApi.change(ChangeUserNameRequest(email, firstName, secondName))
 
-                            if (firstName.isNotEmpty() && firstName != user.firstName.value){
+                                call.enqueue(object: Callback<ChangeUserNameResponse> {
+                                    override fun onResponse(call: Call<ChangeUserNameResponse>, response: Response<ChangeUserNameResponse>
+                                    ) {
+                                        if (response.isSuccessful){
+                                            userViewModel.setFirstName(response.body()!!.firstName)
+                                            userViewModel.setSecondName(response.body()!!.secondName)
+                                            Toast.makeText(this@AccountActivity, "Успешная смена данных", Toast.LENGTH_SHORT).show()
+                                        }
+                                        else{
 
+                                        }
+                                    }
+
+                                    override fun onFailure(call: Call<ChangeUserNameResponse>, t: Throwable) {
+                                        Toast.makeText(
+                                            this@AccountActivity,
+                                            "Ошибка сети: ${t.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
                             }
-
-                            if (secondName.isNotEmpty() && secondName != user.secondName.value){
-
+                            else{
+                                Toast.makeText(this@AccountActivity, "Ошибка смены данных", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier

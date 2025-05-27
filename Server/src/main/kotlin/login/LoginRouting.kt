@@ -9,6 +9,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import org.jetbrains.exposed.sql.update
 import java.util.UUID
 
 fun Application.configureLoginRouting() {
@@ -38,6 +39,33 @@ fun Application.configureLoginRouting() {
                     call.respond(HttpStatusCode.BadRequest, "Invalid Password")
                 }
             }
+        }
+
+        post("/login-change") {
+            val receive = call.receive<ChangeUserNameReceiveRemote>()
+
+            val userDTO = Users.fetchUser(receive.email)
+            if (userDTO == null){
+                call.respond(HttpStatusCode.BadRequest, "User Not Found")
+            }
+            else{
+                if (receive.firstName != ""){
+                    Users.updateFirstName(receive.email, receive.firstName)
+                }
+
+                if (receive.secondName != ""){
+                    Users.updateSecondName(receive.email, receive.secondName)
+                }
+            }
+
+            if (receive.firstName == "" && receive.secondName == ""){
+                call.respond(HttpStatusCode.BadRequest, "")
+            }
+
+            call.respond(ChangeUserNameResponseRemote(
+                if (receive.firstName.isNotEmpty()) receive.firstName else userDTO!!.firstName,
+                if (receive.secondName.isNotEmpty()) receive.secondName else userDTO!!.secondName
+            ))
         }
     }
 }

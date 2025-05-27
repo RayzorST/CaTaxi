@@ -1,5 +1,7 @@
 package com.project.cataxi.database.auth
 
+import kotlinx.serialization.Serializable
+
 data class LoginRequest(
     val email: String,
     val password: String
@@ -25,4 +27,15 @@ data class TokenRequest(
 
 data class TokenResponse(
     val verified: Boolean
+)
+
+data class ChangeUserNameRequest(
+    val email: String,
+    val firstName: String,
+    val secondName: String
+)
+
+data class ChangeUserNameResponse(
+    val firstName: String,
+    val secondName: String
 )

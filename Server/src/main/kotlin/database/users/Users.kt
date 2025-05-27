@@ -1,9 +1,11 @@
 package com.project.database.users
 
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 
 object Users : Table("users") {
     private val firstName = Users.varchar("firstname", 25)
@@ -37,6 +39,32 @@ object Users : Table("users") {
         }
         catch (e: Exception){
             null
+        }
+    }
+
+    fun updateFirstName(email: String, firstName: String){
+        try {
+            transaction {
+                Users.update({ Users.email eq email }) {
+                    it[Users.firstName] = firstName
+                }
+            }
+        }
+        catch (e: Exception){
+
+        }
+    }
+
+    fun updateSecondName(email: String, secondName: String){
+        try {
+            transaction {
+                Users.update({ Users.email eq email }) {
+                    it[Users.secondName] = secondName
+                }
+            }
+        }
+        catch (e: Exception){
+
         }
     }
 }

@@ -14,3 +14,16 @@ data class LoginResponseRemote(
     val firstName: String,
     val secondName: String
 )
+
+@Serializable
+data class ChangeUserNameReceiveRemote(
+    val email: String,
+    val firstName: String,
+    val secondName: String
+)
+
+@Serializable
+data class ChangeUserNameResponseRemote(
+    val firstName: String,
+    val secondName: String
+)

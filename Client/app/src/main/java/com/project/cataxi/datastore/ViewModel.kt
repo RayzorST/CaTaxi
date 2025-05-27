@@ -67,19 +67,13 @@ class UserViewModel(private val dataStore: UserDataStore) : ViewModel() {
 
     fun setFirstName(firstName: String){
         viewModelScope.launch {
-            dataStore.setToken(firstName)
+            dataStore.setFirstName(firstName)
         }
     }
 
     fun setSecondName(secondName: String){
         viewModelScope.launch {
-            dataStore.setToken(secondName)
-        }
-    }
-
-    fun setEmail(email: String){
-        viewModelScope.launch {
-            dataStore.setToken(email)
+            dataStore.setSecondName(secondName)
         }
     }
 
