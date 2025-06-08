@@ -216,7 +216,7 @@ class AuthorizationActivity : ComponentActivity() {
                             passwordErrorState.value = false
                             emailErrorState.value = false
 
-                            val call = ApiClient.authApi.login(LoginRequest(email, sha256(password)))
+                            val call = ApiClient.authApi.login(LoginRequest(email, md5(password)))
 
                             call.enqueue(object: Callback<AuthResponse> {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
@@ -467,7 +467,7 @@ class AuthorizationActivity : ComponentActivity() {
                             passwordErrorState.value = false
                             emailErrorState.value = false
 
-                            val call = ApiClient.authApi.registration(RegistrationRequest(email, sha256(password), firstName, secondName))
+                            val call = ApiClient.authApi.registration(RegistrationRequest(email, md5(password), firstName, secondName))
 
                             call.enqueue(object: Callback<AuthResponse> {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
@@ -527,8 +527,8 @@ class AuthorizationActivity : ComponentActivity() {
 
 }
 
-fun sha256(input: String): String {
-    val digest = MessageDigest.getInstance("SHA-256")
+fun md5(input: String): String {
+    val digest = MessageDigest.getInstance("MD5")
     val hashBytes = digest.digest(input.toByteArray())
     return hashBytes.joinToString("") { String.format("%02x", it) }
 }
