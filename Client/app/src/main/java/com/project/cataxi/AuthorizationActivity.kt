@@ -58,6 +58,7 @@ import com.project.cataxi.ui.theme.CaTaxiTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.security.MessageDigest
 
 class AuthorizationActivity : ComponentActivity() {
 
@@ -215,7 +216,7 @@ class AuthorizationActivity : ComponentActivity() {
                             passwordErrorState.value = false
                             emailErrorState.value = false
 
-                            val call = ApiClient.authApi.login(LoginRequest(email, password))
+                            val call = ApiClient.authApi.login(LoginRequest(email, sha256(password)))
 
                             call.enqueue(object: Callback<AuthResponse> {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
@@ -445,7 +446,6 @@ class AuthorizationActivity : ComponentActivity() {
             Button(
                 shape = RoundedCornerShape(12.dp),
                 onClick = {
-                    Log.e("efe", email.contains("@").toString())
                     when {
                         firstName.length < 3 || firstName.length > 25 -> {
                             firstNameErrorState.value = true
@@ -467,7 +467,7 @@ class AuthorizationActivity : ComponentActivity() {
                             passwordErrorState.value = false
                             emailErrorState.value = false
 
-                            val call = ApiClient.authApi.registration(RegistrationRequest(email, password, firstName, secondName))
+                            val call = ApiClient.authApi.registration(RegistrationRequest(email, sha256(password), firstName, secondName))
 
                             call.enqueue(object: Callback<AuthResponse> {
                                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>
@@ -525,4 +525,10 @@ class AuthorizationActivity : ComponentActivity() {
         }
     }
 
+}
+
+fun sha256(input: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hashBytes = digest.digest(input.toByteArray())
+    return hashBytes.joinToString("") { String.format("%02x", it) }
 }

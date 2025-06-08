@@ -418,7 +418,7 @@ class AccountActivity : ComponentActivity() {
     @Composable
     private fun OrderStatusBadge(isClosed: Boolean, closeDate: String?) {
         val statusText = if (isClosed) {
-            "Завершен ${closeDate}"
+            "Завершен ${formatDate(closeDate)}"
         } else {
             "Активен"
         }
@@ -440,6 +440,6 @@ class AccountActivity : ComponentActivity() {
 
     // Форматирование даты (псевдокод - замените на реальное форматирование)
     private fun formatDate(dateString: String?): String {
-        return dateString?.take(10) ?: "N/A"
+        return dateString?.take(16) ?: "N/A"
     }
 }
